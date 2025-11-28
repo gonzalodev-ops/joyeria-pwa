@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
-import { Download, Image as ImageIcon, LayoutTemplate, Palette } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
+import { Button, MaterialIcon } from './ui';
 
 interface CanvasEditorProps {
     imageSrc: string;
@@ -170,15 +170,15 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(({ im
     return (
         <div className={className}>
             <div className="flex flex-col gap-4">
-                <div className="relative rounded-xl overflow-hidden border border-zinc-700 shadow-2xl bg-zinc-900">
+                <div className="relative rounded-xl overflow-hidden border border-bronze-canvas-border shadow-lg bg-white">
                     <canvas ref={canvasRef} className="w-full h-auto max-w-full" />
                 </div>
 
-                <div className="flex flex-col gap-4 p-4 bg-zinc-900/50 rounded-xl border border-zinc-800">
+                <div className="flex flex-col gap-4 p-4 bg-bronze-canvas-component-bg rounded-xl border border-bronze-canvas-border">
                     <div className="flex flex-wrap gap-6">
                         <div className="space-y-2">
-                            <label className="text-xs font-medium text-zinc-400 flex items-center gap-1.5">
-                                <Palette size={14} />
+                            <label className="text-xs font-bold text-bronze-canvas-secondary-text flex items-center gap-1.5 uppercase tracking-wider">
+                                <MaterialIcon icon="palette" size={16} />
                                 Fondo Premium
                             </label>
                             <div className="flex items-center gap-2">
@@ -186,13 +186,13 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(({ im
                                     <button
                                         key={i}
                                         onClick={() => setBackground(color)}
-                                        className={`w-8 h-8 rounded-full border shadow-sm transition-transform hover:scale-110 ${background === color ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-zinc-900' : 'border-zinc-600'}`}
+                                        className={`w-8 h-8 rounded-full border shadow-sm transition-transform hover:scale-110 ${background === color ? 'ring-2 ring-bronze-canvas-accent ring-offset-2 ring-offset-bronze-canvas-component-bg' : 'border-bronze-canvas-border'}`}
                                         style={{ backgroundColor: color }}
                                         title={color}
                                     />
                                 ))}
-                                <div className="w-px h-6 bg-zinc-700 mx-1" />
-                                <div className="relative w-8 h-8 rounded-full overflow-hidden border border-zinc-600 cursor-pointer hover:scale-110 transition-transform" title="Color Personalizado">
+                                <div className="w-px h-6 bg-bronze-canvas-border mx-1" />
+                                <div className="relative w-8 h-8 rounded-full overflow-hidden border border-bronze-canvas-border cursor-pointer hover:scale-110 transition-transform" title="Color Personalizado">
                                     <input
                                         type="color"
                                         value={background}
@@ -205,18 +205,18 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(({ im
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-xs font-medium text-zinc-400 flex items-center gap-1.5">
-                                <LayoutTemplate size={14} />
+                            <label className="text-xs font-bold text-bronze-canvas-secondary-text flex items-center gap-1.5 uppercase tracking-wider">
+                                <MaterialIcon icon="aspect_ratio" size={16} />
                                 Formato
                             </label>
-                            <div className="flex items-center bg-zinc-950 rounded-lg p-1 border border-zinc-800">
+                            <div className="flex items-center bg-bronze-canvas-background rounded-lg p-1 border border-bronze-canvas-border">
                                 {(['1:1', '4:5', '9:16'] as const).map((ratio) => (
                                     <button
                                         key={ratio}
                                         onClick={() => setAspectRatio(ratio)}
-                                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${aspectRatio === ratio
-                                            ? 'bg-zinc-800 text-white shadow-sm'
-                                            : 'text-zinc-500 hover:text-zinc-300'
+                                        className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${aspectRatio === ratio
+                                            ? 'bg-bronze-canvas-accent text-white shadow-sm'
+                                            : 'text-bronze-canvas-secondary-text hover:text-bronze-canvas-primary-text'
                                             }`}
                                     >
                                         {ratio}
@@ -226,28 +226,29 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(({ im
                         </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-zinc-800/50">
-                        <div className="text-xs text-zinc-500 flex items-center gap-2">
+                    <div className="flex items-center justify-between pt-4 border-t border-bronze-canvas-border">
+                        <div className="text-xs text-bronze-canvas-secondary-text flex items-center gap-2">
                             {logo ? (
-                                <span className="flex items-center gap-1.5 text-green-400">
-                                    <ImageIcon size={12} />
-                                    Logo aplicado automáticamente
+                                <span className="flex items-center gap-1.5 text-green-600 font-medium">
+                                    <MaterialIcon icon="check_circle" size={14} />
+                                    Logo aplicado
                                 </span>
                             ) : (
-                                <span className="flex items-center gap-1.5 text-zinc-500">
-                                    <ImageIcon size={12} />
-                                    Sin logo configurado
+                                <span className="flex items-center gap-1.5 text-bronze-canvas-secondary-text">
+                                    <MaterialIcon icon="info" size={14} />
+                                    Sin logo
                                 </span>
                             )}
                         </div>
 
-                        <button
+                        <Button
                             onClick={handleDownload}
-                            className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg text-sm font-medium transition-colors"
+                            variant="secondary"
+                            size="sm"
+                            icon="download"
                         >
-                            <Download size={16} />
                             Descargar PNG
-                        </button>
+                        </Button>
                     </div>
                 </div>
             </div>
