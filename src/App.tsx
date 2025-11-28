@@ -6,13 +6,15 @@ import { Gallery } from './components/Gallery';
 import { CatalogManager } from './components/CatalogManager';
 import { SaveModal } from './components/SaveModal';
 import { SettingsModal } from './components/SettingsModal';
+import { CatalogSelector } from './components/CatalogSelector';
+import { SaveImageDialog } from './components/SaveImageDialog';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { useToast } from './contexts/ToastContext';
 import { Sparkles, Image as ImageIcon, Layers, Loader2, Lightbulb, Settings, Wand2 } from 'lucide-react';
 import { removeBackground } from './services/photoroom';
 import { analyzeJewelryImage } from './services/gemini';
 import type { JewelryMetadata } from './services/gemini';
-import { uploadWithEnhancement } from './services/cloudinary';
+import { uploadWithEnhancement, uploadDataURLToCloudinary } from './services/cloudinary';
 import type { CloudinaryEnhancement } from './services/cloudinary';
 import { saveImage, getCatalogs, addImageToCatalog, getImages } from './services/database';
 import { InstallPrompt } from './components/InstallPrompt';
@@ -33,6 +35,8 @@ function AppContent() {
   // Modal states
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showCatalogSelector, setShowCatalogSelector] = useState(false);
 
   const canvasEditorRef = useRef<CanvasEditorRef>(null);
 
@@ -209,6 +213,82 @@ function AppContent() {
     } catch (error) {
       console.error('Error saving image:', error);
       showToast('Error al guardar la imagen', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Simple save to gallery (without full metadata flow)
+  const handleSimpleSaveToGallery = async (metadata: { title: string; category: string; material?: string; description?: string }) => {
+    if (!canvasEditorRef.current || !processedImage) return;
+
+    setIsSaving(true);
+    try {
+      const dataURL = canvasEditorRef.current.getCanvasDataURL();
+      if (!dataURL) throw new Error('Failed to get canvas data');
+
+      // Upload to Cloudinary
+      const cloudinaryUrl = await uploadDataURLToCloudinary(dataURL);
+
+      // Save to database
+      await saveImage({
+        url: cloudinaryUrl,
+        title: metadata.title,
+        category: metadata.category,
+        metadata: {
+          material: metadata.material,
+          description: metadata.description,
+          processedAt: new Date().toISOString(),
+        },
+      });
+
+      showToast('Imagen guardada en galería exitosamente!', 'success');
+      loadStats();
+      setActiveTab('gallery');
+    } catch (error) {
+      console.error('Error saving to gallery:', error);
+      showToast('Error al guardar la imagen', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Export to catalog
+  const handleExportToCatalog = async (catalogId: string) => {
+    if (!canvasEditorRef.current || !processedImage) return;
+
+    setIsSaving(true);
+    setShowCatalogSelector(false);
+
+    try {
+      const dataURL = canvasEditorRef.current.getCanvasDataURL();
+      if (!dataURL) throw new Error('Failed to get canvas data');
+
+      // Upload to Cloudinary
+      const cloudinaryUrl = await uploadDataURLToCloudinary(dataURL);
+
+      // Save image to database
+      const savedImage = await saveImage({
+        url: cloudinaryUrl,
+        title: metadata?.title || 'Untitled',
+        category: metadata?.category || 'Other',
+        metadata: {
+          material: metadata?.material,
+          description: metadata?.description,
+          processedAt: new Date().toISOString(),
+        },
+      });
+
+      // Add to catalog
+      if (savedImage?.id) {
+        await addImageToCatalog(catalogId, savedImage.id);
+        showToast('Imagen exportada al catálogo exitosamente!', 'success');
+        loadStats();
+        setActiveTab('catalogs');
+      }
+    } catch (error) {
+      console.error('Error exporting to catalog:', error);
+      showToast('Error al exportar la imagen', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -417,6 +497,22 @@ function AppContent() {
                     {isSaving ? <Loader2 size={16} className="animate-spin" /> : <ImageIcon size={16} />}
                     Guardar Imagen
                   </button>
+                  <button
+                    onClick={() => setShowSaveDialog(true)}
+                    disabled={!processedImage || isSaving}
+                    className="w-full flex items-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-sm font-medium transition-colors text-left"
+                  >
+                    <ImageIcon size={16} />
+                    Guardar en Galería
+                  </button>
+                  <button
+                    onClick={() => setShowCatalogSelector(true)}
+                    disabled={!processedImage || isSaving}
+                    className="w-full flex items-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-sm font-medium transition-colors text-left"
+                  >
+                    <Layers size={16} />
+                    Exportar a Catálogo
+                  </button>
                 </div>
 
                 <div className="mt-8 pt-6 border-t border-zinc-800">
@@ -447,6 +543,18 @@ function AppContent() {
           onCancel={() => setShowSaveModal(false)}
         />
       )}
+
+      <SaveImageDialog
+        isOpen={showSaveDialog}
+        onClose={() => setShowSaveDialog(false)}
+        onSave={handleSimpleSaveToGallery}
+      />
+
+      <CatalogSelector
+        isOpen={showCatalogSelector}
+        onClose={() => setShowCatalogSelector(false)}
+        onSelect={handleExportToCatalog}
+      />
 
       {showSettings && (
         <SettingsModal onClose={() => setShowSettings(false)} />
