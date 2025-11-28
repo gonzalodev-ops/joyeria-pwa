@@ -15,6 +15,7 @@ import type { JewelryMetadata } from './services/gemini';
 import { uploadWithEnhancement } from './services/cloudinary';
 import type { CloudinaryEnhancement } from './services/cloudinary';
 import { saveImage, getCatalogs, addImageToCatalog, getImages } from './services/database';
+import { InstallPrompt } from './components/InstallPrompt';
 
 function AppContent() {
   const { showToast } = useToast();
@@ -216,6 +217,7 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-blue-500/30">
+      <InstallPrompt />
       <header className="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-md sticky top-0 z-[100000]">
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
