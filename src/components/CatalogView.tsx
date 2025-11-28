@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { getCatalogById, getImagesInCatalog } from '../services/database';
 import type { CatalogWithItems, ImageRecord } from '../services/database';
 import { Loader2, Share2 } from 'lucide-react';
@@ -62,12 +62,12 @@ export function CatalogView() {
             <header className="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-md sticky top-0 z-10">
                 <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <a
-                            href="/"
+                        <Link
+                            to="/"
                             className="flex items-center gap-2 px-3 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm font-medium transition-colors"
                         >
                             ← Back to Home
-                        </a>
+                        </Link>
                         <div>
                             <h1 className="font-bold text-lg">{catalog.title}</h1>
                             {catalog.description && (

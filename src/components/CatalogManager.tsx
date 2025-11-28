@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { Plus, Share2, Eye, MoreVertical, Loader2, Trash2, Edit2, Image as ImageIcon } from 'lucide-react';
 import { getCatalogs, createCatalog, deleteCatalog, updateCatalog, getImagesInCatalog } from '../services/database';
 import type { CatalogWithItems } from '../services/database';
+import { useToast } from '../contexts/ToastContext';
 
 export function CatalogManager() {
     const [catalogs, setCatalogs] = useState<CatalogWithItems[]>([]);
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
     const [showMenu, setShowMenu] = useState<string | null>(null);
+    const { showToast } = useToast();
 
     useEffect(() => {
         loadCatalogs();
@@ -52,11 +54,11 @@ export function CatalogManager() {
                 background_color: backgroundColor || '#ffffff',
             });
 
-            alert('¡Catálogo creado exitosamente!');
+            showToast('¡Catálogo creado exitosamente!', 'success');
             loadCatalogs();
         } catch (error) {
             console.error('Error creating catalog:', error);
-            alert('Error al crear el catálogo. Intenta de nuevo.');
+            showToast('Error al crear el catálogo. Intenta de nuevo.', 'error');
         } finally {
             setCreating(false);
         }
@@ -76,9 +78,10 @@ export function CatalogManager() {
                 background_color: backgroundColor || '#ffffff'
             });
             loadCatalogs();
+            showToast('Catálogo actualizado correctamente', 'success');
         } catch (error) {
             console.error('Error updating catalog:', error);
-            alert('Error al actualizar el catálogo.');
+            showToast('Error al actualizar el catálogo.', 'error');
         }
     };
 
@@ -86,25 +89,25 @@ export function CatalogManager() {
         try {
             const images = await getImagesInCatalog(catalog.id!);
             if (images.length === 0) {
-                alert('El catálogo no tiene imágenes para usar como portada.');
+                showToast('El catálogo no tiene imágenes para usar como portada.', 'warning');
                 return;
             }
             // Use the first image found
             const latestImage = images[0];
 
             await updateCatalog(catalog.id!, { cover_url: latestImage.url });
-            alert('Portada actualizada con la primera imagen del catálogo.');
+            showToast('Portada actualizada con la primera imagen del catálogo.', 'success');
             loadCatalogs();
         } catch (error) {
             console.error('Error setting cover:', error);
-            alert('Error al actualizar la portada.');
+            showToast('Error al actualizar la portada.', 'error');
         }
     };
 
     const handleShare = (catalog: CatalogWithItems) => {
         const shareUrl = `${window.location.origin}/catalog/${catalog.id}`;
         navigator.clipboard.writeText(shareUrl);
-        alert(`¡Link copiado al portapapeles!\n${shareUrl}`);
+        showToast('Link copiado al portapapeles', 'success');
     };
 
     const handlePreview = (catalog: CatalogWithItems) => {
@@ -120,10 +123,10 @@ export function CatalogManager() {
         try {
             await deleteCatalog(catalog.id!);
             setCatalogs(catalogs.filter(c => c.id !== catalog.id));
-            alert('Catálogo eliminado correctamente');
+            showToast('Catálogo eliminado correctamente', 'success');
         } catch (error) {
             console.error('Error deleting catalog:', error);
-            alert('Error al eliminar el catálogo');
+            showToast('Error al eliminar el catálogo', 'error');
         }
     };
 

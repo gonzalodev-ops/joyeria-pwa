@@ -3,6 +3,7 @@ import { Search, Filter, Grid, List, Trash2, ArrowUpDown, Edit2 } from 'lucide-r
 import { getImages, deleteImage, updateImage } from '../services/database';
 import type { ImageRecord } from '../services/database';
 import { ImageEditModal } from './ImageEditModal';
+import { useToast } from '../contexts/ToastContext';
 
 interface GalleryItem {
     id: string;
@@ -24,6 +25,7 @@ export function Gallery() {
     const [loading, setLoading] = useState(true);
     const [availableCategories, setAvailableCategories] = useState<string[]>([]);
     const [editingImage, setEditingImage] = useState<ImageRecord | null>(null);
+    const { showToast } = useToast();
 
     useEffect(() => {
         loadImages();
@@ -60,9 +62,10 @@ export function Gallery() {
         try {
             await deleteImage(id);
             setItems(items.filter(item => item.id !== id));
+            showToast('Imagen eliminada correctamente', 'success');
         } catch (error) {
             console.error('Error deleting image:', error);
-            alert('Error al eliminar la imagen');
+            showToast('Error al eliminar la imagen', 'error');
         }
     };
 
@@ -97,9 +100,10 @@ export function Gallery() {
             }
 
             setEditingImage(null);
+            showToast('Imagen actualizada correctamente', 'success');
         } catch (error) {
             console.error('Error updating image:', error);
-            alert('Error al actualizar la imagen');
+            showToast('Error al actualizar la imagen', 'error');
         }
     };
 

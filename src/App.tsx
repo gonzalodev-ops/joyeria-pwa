@@ -7,6 +7,7 @@ import { CatalogManager } from './components/CatalogManager';
 import { SaveModal } from './components/SaveModal';
 import { SettingsModal } from './components/SettingsModal';
 import { SettingsProvider } from './contexts/SettingsContext';
+import { useToast } from './contexts/ToastContext';
 import { Sparkles, Image as ImageIcon, Layers, Loader2, Lightbulb, Settings, Wand2 } from 'lucide-react';
 import { removeBackground } from './services/photoroom';
 import { analyzeJewelryImage } from './services/gemini';
@@ -16,6 +17,7 @@ import type { CloudinaryEnhancement } from './services/cloudinary';
 import { saveImage, getCatalogs, addImageToCatalog, getImages } from './services/database';
 
 function AppContent() {
+  const { showToast } = useToast();
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [metadata, setMetadata] = useState<JewelryMetadata | null>(null);
@@ -87,7 +89,7 @@ function AppContent() {
 
     } catch (error) {
       console.error('Error in auto-process:', error);
-      alert('Error durante el procesamiento automático. Por favor verifica tu conexión y las claves API.');
+      showToast('Error durante el procesamiento automático. Verifica tu conexión.', 'error');
     } finally {
       setIsProcessing(false);
       setIsAnalyzing(false);
@@ -134,7 +136,7 @@ function AppContent() {
 
   const initiateSave = () => {
     if (!canvasEditorRef.current || !processedImage) {
-      alert('Please process an image first');
+      showToast('Por favor procesa una imagen primero', 'warning');
       return;
     }
 
@@ -195,17 +197,17 @@ function AppContent() {
       // If destination is catalog, add to catalog
       if (destination === 'catalog' && catalogId && savedImage?.id) {
         await addImageToCatalog(catalogId, savedImage.id);
-        alert(`Imagen guardada y agregada al catálogo exitosamente!`);
+        showToast('Imagen guardada y agregada al catálogo exitosamente!', 'success');
         setActiveTab('catalogs');
       } else {
-        alert('Imagen guardada en galería exitosamente!');
+        showToast('Imagen guardada en galería exitosamente!', 'success');
         setActiveTab('gallery');
       }
 
       loadStats();
     } catch (error) {
       console.error('Error saving image:', error);
-      alert('Error al guardar la imagen');
+      showToast('Error al guardar la imagen', 'error');
     } finally {
       setIsSaving(false);
     }
