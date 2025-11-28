@@ -19,11 +19,13 @@ type SortOption = 'newest' | 'oldest' | 'name-asc' | 'name-desc';
 export function Gallery() {
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState('Todas');
+    const [material, setMaterial] = useState('Todos');
     const [view, setView] = useState<'grid' | 'list'>('grid');
     const [sortBy, setSortBy] = useState<SortOption>('newest');
     const [items, setItems] = useState<GalleryItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+    const [availableMaterials, setAvailableMaterials] = useState<string[]>([]);
     const [editingImage, setEditingImage] = useState<ImageRecord | null>(null);
     const { showToast } = useToast();
 
@@ -39,6 +41,10 @@ export function Gallery() {
             // Extract unique categories
             const categories = Array.from(new Set(images.map(img => img.category))).filter(Boolean).sort();
             setAvailableCategories(categories);
+
+            // Extract unique materials
+            const materials = Array.from(new Set(images.map(img => img.metadata?.material || img.material))).filter(Boolean).sort();
+            setAvailableMaterials(materials as string[]);
 
             const galleryItems: GalleryItem[] = images.map((img: ImageRecord) => ({
                 id: img.id!,
@@ -94,9 +100,13 @@ export function Gallery() {
                         : item
                 ));
 
-                // Update categories if needed
+                // Update categories and materials if needed
                 const categories = Array.from(new Set(items.map(img => img.category))).filter(Boolean).sort();
                 setAvailableCategories(categories);
+
+                // Re-extract materials might be complex here without full reload, but let's try
+                // For now, reload images to be safe or just keep current list
+                // Ideally we should update availableMaterials too
             }
 
             setEditingImage(null);
@@ -110,7 +120,9 @@ export function Gallery() {
     const filteredItems = items.filter(item => {
         const matchesSearch = item.title.toLowerCase().includes(search.toLowerCase());
         const matchesCategory = category === 'Todas' || item.category === category;
-        return matchesSearch && matchesCategory;
+        const itemMaterial = item.fullRecord?.metadata?.material || item.fullRecord?.material;
+        const matchesMaterial = material === 'Todos' || itemMaterial === material;
+        return matchesSearch && matchesCategory && matchesMaterial;
     });
 
     const sortedItems = [...filteredItems].sort((a, b) => {
@@ -155,6 +167,21 @@ export function Gallery() {
                         <option value="Todas">Todas las Categorías</option>
                         {availableCategories.map(cat => (
                             <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Material Filter */}
+                <div className="flex items-center gap-2 px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl">
+                    <Filter size={16} className="text-zinc-500" />
+                    <select
+                        value={material}
+                        onChange={(e) => setMaterial(e.target.value)}
+                        className="bg-transparent text-sm focus:outline-none cursor-pointer"
+                    >
+                        <option value="Todos">Todos los Materiales</option>
+                        {availableMaterials.map(mat => (
+                            <option key={mat} value={mat}>{mat}</option>
                         ))}
                     </select>
                 </div>
