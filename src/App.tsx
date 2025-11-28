@@ -4,11 +4,10 @@ import { CanvasEditor } from './components/CanvasEditor';
 import type { CanvasEditorRef } from './components/CanvasEditor';
 import { Gallery } from './components/Gallery';
 import { CatalogManager } from './components/CatalogManager';
-import { MetadataModal } from './components/MetadataModal';
-import { EnhancementPreview } from './components/EnhancementPreview';
+import { SaveModal } from './components/SaveModal';
 import { SettingsModal } from './components/SettingsModal';
 import { SettingsProvider } from './contexts/SettingsContext';
-import { Sparkles, Image as ImageIcon, Layers, Share2, Loader2, Lightbulb, Settings, Wand2 } from 'lucide-react';
+import { Sparkles, Image as ImageIcon, Layers, Loader2, Lightbulb, Settings, Wand2 } from 'lucide-react';
 import { removeBackground } from './services/photoroom';
 import { analyzeJewelryImage } from './services/gemini';
 import type { JewelryMetadata } from './services/gemini';
@@ -23,20 +22,14 @@ function AppContent() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
   const [activeTab, setActiveTab] = useState<'studio' | 'gallery' | 'catalogs'>('studio');
 
   // Stats
   const [stats, setStats] = useState({ processed: 0, catalogs: 0 });
 
   // Modal states
-  const [showMetadataModal, setShowMetadataModal] = useState(false);
-  const [showEnhancementPreview, setShowEnhancementPreview] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [pendingAction, setPendingAction] = useState<'save' | 'export' | null>(null);
-
-  // Enhancement state
-  const [enhancements, setEnhancements] = useState<CloudinaryEnhancement | null>(null);
 
   const canvasEditorRef = useRef<CanvasEditorRef>(null);
 
@@ -139,22 +132,13 @@ function AppContent() {
     }
   };
 
-  const initiateSave = (action: 'save' | 'export') => {
-    console.log('initiateSave called with action:', action);
-    console.log('Current state:', {
-      hasCanvas: !!canvasEditorRef.current,
-      processedImage: !!processedImage,
-      metadata: !!metadata
-    });
-
+  const initiateSave = () => {
     if (!canvasEditorRef.current || !processedImage) {
-      console.warn('Save aborted: No processed image');
       alert('Please process an image first');
       return;
     }
 
     if (!metadata) {
-      console.warn('Save warning: No metadata');
       const proceed = confirm('No se ha generado metadata con IA. ¿Deseas guardar la imagen de todos modos?');
       if (!proceed) return;
 
@@ -169,38 +153,22 @@ function AppContent() {
         cloudinary_enhancements: { brightness: 0, contrast: 0, saturation: 0, auto_enhance: false }
       };
       setMetadata(dummyMetadata);
-      setPendingAction(action);
-      setShowMetadataModal(true);
-      return;
     }
 
-    console.log('Opening Metadata Modal...');
-    setPendingAction(action);
-    setShowMetadataModal(true);
+    setShowSaveModal(true);
   };
 
-  const handleMetadataConfirmed = (confirmedMetadata: JewelryMetadata) => {
-    setMetadata(confirmedMetadata);
-    setShowMetadataModal(false);
-    setShowEnhancementPreview(true);
-  };
+  const handleSave = async (
+    confirmedMetadata: JewelryMetadata,
+    enhancements: CloudinaryEnhancement,
+    destination: 'gallery' | 'catalog',
+    catalogId?: string
+  ) => {
+    if (!canvasEditorRef.current) return;
 
-  const handleEnhancementConfirmed = async (enhancements: CloudinaryEnhancement) => {
-    setShowEnhancementPreview(false);
-
-    if (pendingAction === 'save') {
-      await executeSaveToGallery(enhancements);
-    } else if (pendingAction === 'export') {
-      await executeExportToCatalog(enhancements);
-    }
-
-    setPendingAction(null);
-  };
-
-  const executeSaveToGallery = async (enhancements: CloudinaryEnhancement) => {
-    if (!canvasEditorRef.current || !metadata) return;
-
+    setShowSaveModal(false);
     setIsSaving(true);
+
     try {
       const dataURL = canvasEditorRef.current.getCanvasDataURL();
       if (!dataURL) throw new Error('Failed to get canvas data');
@@ -208,96 +176,41 @@ function AppContent() {
       // Upload to Cloudinary with enhancements
       const cloudinaryUrl = await uploadWithEnhancement(dataURL, enhancements);
 
-      // Save to database
-      await saveImage({
+      // Save image to database
+      const savedImage = await saveImage({
         url: cloudinaryUrl,
         original_url: selectedImage ? URL.createObjectURL(selectedImage) : undefined,
-        title: metadata.title,
-        category: metadata.category,
+        title: confirmedMetadata.title,
+        category: confirmedMetadata.category,
         metadata: {
-          material: metadata.material,
-          description: metadata.description,
-          keywords: metadata.keywords,
-          lighting_analysis: metadata.lighting_analysis,
+          material: confirmedMetadata.material,
+          description: confirmedMetadata.description,
+          keywords: confirmedMetadata.keywords,
+          lighting_analysis: confirmedMetadata.lighting_analysis,
           enhancements_applied: enhancements,
           processedAt: new Date().toISOString(),
         },
       });
 
-      alert('Image saved to gallery successfully!');
+      // If destination is catalog, add to catalog
+      if (destination === 'catalog' && catalogId && savedImage?.id) {
+        await addImageToCatalog(catalogId, savedImage.id);
+        alert(`Imagen guardada y agregada al catálogo exitosamente!`);
+        setActiveTab('catalogs');
+      } else {
+        alert('Imagen guardada en galería exitosamente!');
+        setActiveTab('gallery');
+      }
+
       loadStats();
-      setActiveTab('gallery');
     } catch (error) {
-      console.error('Error saving to gallery:', error);
-      alert('Failed to save image to gallery.');
+      console.error('Error saving image:', error);
+      alert('Error al guardar la imagen');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const executeExportToCatalog = async (enhancements: CloudinaryEnhancement) => {
-    if (!canvasEditorRef.current || !metadata) return;
-
-    setIsExporting(true);
-    try {
-      const dataURL = canvasEditorRef.current.getCanvasDataURL();
-      if (!dataURL) throw new Error('Failed to get canvas data');
-
-      // Upload to Cloudinary with enhancements
-      const cloudinaryUrl = await uploadWithEnhancement(dataURL, enhancements);
-
-      // Save image first
-      const savedImage = await saveImage({
-        url: cloudinaryUrl,
-        original_url: selectedImage ? URL.createObjectURL(selectedImage) : undefined,
-        title: metadata.title,
-        category: metadata.category,
-        metadata: {
-          material: metadata.material,
-          description: metadata.description,
-          keywords: metadata.keywords,
-          lighting_analysis: metadata.lighting_analysis,
-          enhancements_applied: enhancements,
-          processedAt: new Date().toISOString(),
-        },
-      });
-
-      if (!savedImage?.id) throw new Error('Failed to save image');
-
-      // Get catalogs
-      const catalogs = await getCatalogs();
-
-      if (catalogs.length === 0) {
-        alert('No catalogs found. Please create a catalog first.');
-        setActiveTab('catalogs');
-        return;
-      }
-
-      // Let user select catalog
-      const catalogList = catalogs.map((c, i) => `${i + 1}. ${c.title}`).join('\n');
-      const selection = prompt(`Select catalog:\n${catalogList}\n\nEnter number:`, '1');
-
-      if (!selection) return;
-
-      const catalogIndex = parseInt(selection) - 1;
-      if (catalogIndex < 0 || catalogIndex >= catalogs.length) {
-        alert('Invalid selection');
-        return;
-      }
-
-      const selectedCatalog = catalogs[catalogIndex];
-      await addImageToCatalog(selectedCatalog.id!, savedImage.id);
-
-      alert(`Image added to "${selectedCatalog.title}" successfully!`);
-      loadStats();
-      setActiveTab('catalogs');
-    } catch (error) {
-      console.error('Error exporting to catalog:', error);
-      alert('Failed to export to catalog.');
-    } finally {
-      setIsExporting(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-blue-500/30">
@@ -493,20 +406,12 @@ function AppContent() {
                 <h3 className="font-semibold mb-4 text-zinc-200">Quick Actions</h3>
                 <div className="space-y-2">
                   <button
-                    onClick={() => initiateSave('export')}
-                    disabled={!processedImage || isExporting}
-                    className="w-full flex items-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-sm font-medium transition-colors text-left"
-                  >
-                    {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Share2 size={16} />}
-                    Export to Catalog
-                  </button>
-                  <button
-                    onClick={() => initiateSave('save')}
+                    onClick={initiateSave}
                     disabled={!processedImage || isSaving}
-                    className="w-full flex items-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-sm font-medium transition-colors text-left"
+                    className="w-full flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-sm font-medium transition-colors text-left"
                   >
                     {isSaving ? <Loader2 size={16} className="animate-spin" /> : <ImageIcon size={16} />}
-                    Save to Gallery
+                    Guardar Imagen
                   </button>
                 </div>
 
@@ -530,20 +435,12 @@ function AppContent() {
       </main>
 
       {/* Modals */}
-      {showMetadataModal && metadata && (
-        <MetadataModal
+      {showSaveModal && metadata && canvasEditorRef.current && (
+        <SaveModal
           metadata={metadata}
-          onSave={handleMetadataConfirmed}
-          onCancel={() => setShowMetadataModal(false)}
-        />
-      )}
-
-      {showEnhancementPreview && metadata && canvasEditorRef.current && (
-        <EnhancementPreview
-          originalUrl={canvasEditorRef.current.getCanvasDataURL() || ''}
-          initialEnhancements={metadata.cloudinary_enhancements}
-          onSave={handleEnhancementConfirmed}
-          onCancel={() => setShowEnhancementPreview(false)}
+          previewUrl={canvasEditorRef.current.getCanvasDataURL() || ''}
+          onSave={handleSave}
+          onCancel={() => setShowSaveModal(false)}
         />
       )}
 
