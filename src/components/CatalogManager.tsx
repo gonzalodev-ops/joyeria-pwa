@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Plus, Share2, Eye, MoreVertical, Loader2, Trash2, Edit2, Image as ImageIcon } from 'lucide-react';
+import { Plus, Share2, Eye, MoreVertical, Loader2, Trash2, Edit2, Image as ImageIcon, ArrowUpDown } from 'lucide-react';
 import { getCatalogs, createCatalog, deleteCatalog, updateCatalog, getImagesInCatalog } from '../services/database';
 import type { CatalogWithItems } from '../services/database';
 import { useToast } from '../contexts/ToastContext';
+import { CatalogSortModal } from './CatalogSortModal';
 
 export function CatalogManager() {
     const [catalogs, setCatalogs] = useState<CatalogWithItems[]>([]);
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
     const [showMenu, setShowMenu] = useState<string | null>(null);
+    const [sortCatalog, setSortCatalog] = useState<CatalogWithItems | null>(null);
     const { showToast } = useToast();
 
     useEffect(() => {
@@ -205,6 +207,13 @@ export function CatalogManager() {
                                                     Vista Previa
                                                 </button>
                                                 <button
+                                                    onClick={(e) => { e.stopPropagation(); setSortCatalog(catalog); setShowMenu(null); }}
+                                                    className="w-full px-4 py-3 text-left text-sm hover:bg-zinc-800 transition-colors flex items-center gap-3 text-zinc-300 hover:text-white"
+                                                >
+                                                    <ArrowUpDown size={16} />
+                                                    Ordenar Items
+                                                </button>
+                                                <button
                                                     onClick={(e) => { e.stopPropagation(); handleEdit(catalog); }}
                                                     className="w-full px-4 py-3 text-left text-sm hover:bg-zinc-800 transition-colors flex items-center gap-3 text-zinc-300 hover:text-white"
                                                 >
@@ -273,6 +282,14 @@ export function CatalogManager() {
                         <span className="font-medium text-zinc-400 group-hover:text-zinc-200 text-lg">Crear Nuevo Catálogo</span>
                     </button>
                 </div>
+            )}
+
+            {sortCatalog && (
+                <CatalogSortModal
+                    catalogId={sortCatalog.id!}
+                    catalogTitle={sortCatalog.title}
+                    onClose={() => setSortCatalog(null)}
+                />
             )}
         </div>
     );

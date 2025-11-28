@@ -209,9 +209,23 @@ export async function deleteCatalog(id: string): Promise<void> {
 
 export async function addImageToCatalog(catalogId: string, imageId: string): Promise<void> {
     try {
+        // Get current max position
+        const { data: items } = await supabase
+            .from('catalog_items')
+            .select('position')
+            .eq('catalog_id', catalogId)
+            .order('position', { ascending: false })
+            .limit(1);
+
+        const nextPosition = (items && items.length > 0 && items[0].position !== null) ? items[0].position + 1 : 0;
+
         const { error } = await supabase
             .from('catalog_items')
-            .insert([{ catalog_id: catalogId, image_id: imageId }]);
+            .insert([{
+                catalog_id: catalogId,
+                image_id: imageId,
+                position: nextPosition
+            }]);
 
         if (error) throw error;
     } catch (error) {
@@ -240,9 +254,11 @@ export async function getImagesInCatalog(catalogId: string): Promise<ImageRecord
         const { data, error } = await supabase
             .from('catalog_items')
             .select(`
+                position,
                 images (*)
             `)
-            .eq('catalog_id', catalogId);
+            .eq('catalog_id', catalogId)
+            .order('position', { ascending: true });
 
         if (error) throw error;
 
@@ -251,6 +267,30 @@ export async function getImagesInCatalog(catalogId: string): Promise<ImageRecord
         return images;
     } catch (error) {
         console.error('Error fetching catalog images:', error);
+        throw error;
+    }
+}
+
+export async function updateCatalogItemPositions(catalogId: string, items: { imageId: string, position: number }[]): Promise<void> {
+    try {
+        // We can use the RPC function if created, or update one by one for now (less efficient but works without RPC)
+        // Using RPC is better, but let's assume the user might not have run the migration yet or RPC creation failed.
+        // Let's try to use upsert on catalog_items if possible, but we need the PK.
+        // The PK is (catalog_id, image_id).
+
+        const updates = items.map(item => ({
+            catalog_id: catalogId,
+            image_id: item.imageId,
+            position: item.position
+        }));
+
+        const { error } = await supabase
+            .from('catalog_items')
+            .upsert(updates, { onConflict: 'catalog_id,image_id' });
+
+        if (error) throw error;
+    } catch (error) {
+        console.error('Error updating positions:', error);
         throw error;
     }
 }
