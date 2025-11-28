@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { X, Save } from 'lucide-react';
 import type { ImageRecord } from '../services/database';
+import { Button, Input, Select, Textarea, MaterialIcon } from './ui';
 
 interface ImageEditModalProps {
     image: ImageRecord;
@@ -52,24 +52,24 @@ export function ImageEditModal({ image, onSave, onCancel }: ImageEditModalProps)
             onClick={onCancel}
         >
             <div
-                className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-200"
+                className="bg-bronze-canvas-background border border-bronze-canvas-border rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-200"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 px-6 py-4 flex items-center justify-between z-10">
-                    <h2 className="text-xl font-semibold">Editar Metadata</h2>
+                <div className="sticky top-0 bg-bronze-canvas-background border-b border-bronze-canvas-border px-6 py-4 flex items-center justify-between z-10">
+                    <h2 className="text-xl font-bold text-bronze-canvas-primary-text">Editar Metadata</h2>
                     <button
                         onClick={onCancel}
-                        className="w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-colors"
+                        className="w-8 h-8 rounded-lg bg-bronze-canvas-component-bg hover:bg-bronze-canvas-border flex items-center justify-center transition-colors text-bronze-canvas-primary-text"
                     >
-                        <X size={18} />
+                        <MaterialIcon icon="close" size={18} />
                     </button>
                 </div>
 
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="p-6 space-y-6">
                     {/* Image Preview */}
-                    <div className="relative aspect-video rounded-xl overflow-hidden bg-zinc-950">
+                    <div className="relative aspect-video rounded-xl overflow-hidden bg-white border border-bronze-canvas-border">
                         <img
                             src={image.url}
                             alt={image.title}
@@ -77,86 +77,56 @@ export function ImageEditModal({ image, onSave, onCancel }: ImageEditModalProps)
                         />
                     </div>
 
-                    {/* Title */}
-                    <div>
-                        <label className="block text-sm font-medium text-zinc-300 mb-2">
-                            Título *
-                        </label>
-                        <input
-                            type="text"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            required
-                            className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl focus:outline-none focus:border-blue-500 transition-colors"
-                            placeholder="Ej: Anillo de Plata con Cristal"
-                        />
-                    </div>
+                    <Input
+                        label="Título"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        required
+                        placeholder="Ej: Anillo de Plata con Cristal"
+                    />
 
-                    {/* Category */}
-                    <div>
-                        <label className="block text-sm font-medium text-zinc-300 mb-2">
-                            Categoría *
-                        </label>
-                        <select
-                            value={category}
-                            onChange={(e) => setCategory(e.target.value)}
-                            required
-                            className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
-                        >
-                            {categories.map(cat => (
-                                <option key={cat} value={cat}>{cat}</option>
-                            ))}
-                        </select>
-                    </div>
+                    <Select
+                        label="Categoría"
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        required
+                        options={categories.map(cat => ({ value: cat, label: cat }))}
+                    />
 
-                    {/* Material */}
-                    <div>
-                        <label className="block text-sm font-medium text-zinc-300 mb-2">
-                            Material
-                        </label>
-                        <input
-                            type="text"
-                            value={material}
-                            onChange={(e) => setMaterial(e.target.value)}
-                            className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl focus:outline-none focus:border-blue-500 transition-colors"
-                            placeholder="Ej: Plata 925, Cristal Swarovski"
-                        />
-                    </div>
+                    <Input
+                        label="Material"
+                        value={material}
+                        onChange={(e) => setMaterial(e.target.value)}
+                        placeholder="Ej: Plata 925, Cristal Swarovski"
+                    />
 
-                    {/* Description */}
-                    <div>
-                        <label className="block text-sm font-medium text-zinc-300 mb-2">
-                            Descripción
-                        </label>
-                        <textarea
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            rows={3}
-                            className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl focus:outline-none focus:border-blue-500 transition-colors resize-none"
-                            placeholder="Descripción breve del producto..."
-                            maxLength={200}
-                        />
-                        <div className="text-xs text-zinc-500 mt-1 text-right">
-                            {description.length}/200 caracteres
-                        </div>
-                    </div>
+                    <Textarea
+                        label="Descripción"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        rows={3}
+                        placeholder="Descripción breve del producto..."
+                        maxLength={200}
+                        helperText={`${description.length}/200 caracteres`}
+                    />
 
                     {/* Actions */}
                     <div className="flex gap-3 pt-4">
-                        <button
+                        <Button
                             type="button"
+                            variant="secondary"
+                            fullWidth
                             onClick={onCancel}
-                            className="flex-1 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 rounded-xl font-medium transition-colors"
                         >
                             Cancelar
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             type="submit"
-                            className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                            fullWidth
+                            icon="save"
                         >
-                            <Save size={18} />
                             Guardar Cambios
-                        </button>
+                        </Button>
                     </div>
                 </form>
             </div>

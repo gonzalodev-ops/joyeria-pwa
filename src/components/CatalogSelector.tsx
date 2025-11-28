@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Folder } from 'lucide-react';
 import { getCatalogs, createCatalog } from '../services/database';
 import type { CatalogWithItems } from '../services/database';
+import { Button, Input, MaterialIcon } from './ui';
 
 interface CatalogSelectorProps {
     isOpen: boolean;
@@ -59,40 +59,40 @@ export function CatalogSelector({ isOpen, onClose, onSelect }: CatalogSelectorPr
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full max-h-[80vh] overflow-hidden flex flex-col">
-                <div className="flex items-center justify-between p-6 border-b border-zinc-800">
-                    <h2 className="text-xl font-semibold">Select Catalog</h2>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="bg-bronze-canvas-background border border-bronze-canvas-border rounded-2xl max-w-md w-full max-h-[80vh] overflow-hidden flex flex-col shadow-2xl animate-in zoom-in-95 duration-300">
+                <div className="flex items-center justify-between p-6 border-b border-bronze-canvas-border bg-bronze-canvas-background rounded-t-2xl">
+                    <h2 className="text-xl font-bold text-bronze-canvas-primary-text">Seleccionar Catálogo</h2>
                     <button
                         onClick={onClose}
-                        className="p-1 hover:bg-zinc-800 rounded-lg transition-colors"
+                        className="p-1 hover:bg-bronze-canvas-component-bg rounded-lg transition-colors text-bronze-canvas-secondary-text"
                     >
-                        <X size={20} />
+                        <MaterialIcon icon="close" size={20} />
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 space-y-3">
+                <div className="flex-1 overflow-y-auto p-6 space-y-3 bg-bronze-canvas-background">
                     {isLoading && catalogs.length === 0 ? (
-                        <div className="text-center text-zinc-500 py-8">Loading...</div>
+                        <div className="text-center text-bronze-canvas-secondary-text py-8">Cargando...</div>
                     ) : catalogs.length === 0 && !isCreating ? (
-                        <div className="text-center text-zinc-500 py-8">
-                            <p>No catalogs yet</p>
-                            <p className="text-sm mt-2">Create your first catalog below</p>
+                        <div className="text-center text-bronze-canvas-secondary-text py-8">
+                            <p>No hay catálogos aún</p>
+                            <p className="text-sm mt-2">Crea tu primer catálogo abajo</p>
                         </div>
                     ) : (
                         catalogs.map((catalog) => (
                             <button
                                 key={catalog.id}
                                 onClick={() => onSelect(catalog.id!)}
-                                className="w-full flex items-center gap-3 p-4 bg-zinc-800/50 hover:bg-zinc-800 rounded-xl transition-colors text-left"
+                                className="w-full flex items-center gap-3 p-4 bg-bronze-canvas-component-bg hover:bg-white border border-transparent hover:border-bronze-canvas-accent rounded-xl transition-all text-left group shadow-sm"
                             >
-                                <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
-                                    <Folder size={20} />
+                                <div className="w-10 h-10 rounded-lg bg-bronze-canvas-accent/10 flex items-center justify-center text-bronze-canvas-accent group-hover:bg-bronze-canvas-accent group-hover:text-white transition-colors">
+                                    <MaterialIcon icon="folder" size={24} />
                                 </div>
                                 <div className="flex-1">
-                                    <h3 className="font-medium">{catalog.title}</h3>
-                                    <p className="text-xs text-zinc-500">
-                                        {catalog.itemCount || 0} items • {catalog.status}
+                                    <h3 className="font-bold text-bronze-canvas-primary-text">{catalog.title}</h3>
+                                    <p className="text-xs text-bronze-canvas-secondary-text">
+                                        {catalog.itemCount || 0} items • {catalog.status === 'draft' ? 'Borrador' : 'Publicado'}
                                     </p>
                                 </div>
                             </button>
@@ -100,13 +100,11 @@ export function CatalogSelector({ isOpen, onClose, onSelect }: CatalogSelectorPr
                     )}
 
                     {isCreating && (
-                        <div className="p-4 bg-zinc-800/50 rounded-xl space-y-3">
-                            <input
-                                type="text"
+                        <div className="p-4 bg-bronze-canvas-component-bg rounded-xl space-y-3 border border-bronze-canvas-accent animate-in fade-in slide-in-from-bottom-2 duration-200">
+                            <Input
                                 value={newCatalogName}
                                 onChange={(e) => setNewCatalogName(e.target.value)}
-                                placeholder="Catalog name..."
-                                className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg focus:outline-none focus:border-blue-500"
+                                placeholder="Nombre del catálogo..."
                                 autoFocus
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') handleCreateCatalog();
@@ -114,36 +112,41 @@ export function CatalogSelector({ isOpen, onClose, onSelect }: CatalogSelectorPr
                                 }}
                             />
                             <div className="flex gap-2">
-                                <button
+                                <Button
                                     onClick={handleCreateCatalog}
                                     disabled={!newCatalogName.trim() || isLoading}
-                                    className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium transition-colors"
+                                    loading={isLoading}
+                                    fullWidth
+                                    size="sm"
                                 >
-                                    Create
-                                </button>
-                                <button
+                                    Crear
+                                </Button>
+                                <Button
                                     onClick={() => {
                                         setIsCreating(false);
                                         setNewCatalogName('');
                                     }}
-                                    className="px-3 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg text-sm font-medium transition-colors"
+                                    variant="secondary"
+                                    fullWidth
+                                    size="sm"
                                 >
-                                    Cancel
-                                </button>
+                                    Cancelar
+                                </Button>
                             </div>
                         </div>
                     )}
                 </div>
 
-                <div className="p-6 border-t border-zinc-800">
-                    <button
+                <div className="p-6 border-t border-bronze-canvas-border bg-bronze-canvas-background rounded-b-2xl">
+                    <Button
                         onClick={() => setIsCreating(true)}
                         disabled={isCreating}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 rounded-xl font-medium transition-colors"
+                        fullWidth
+                        variant="secondary"
+                        icon="add"
                     >
-                        <Plus size={18} />
-                        New Catalog
-                    </button>
+                        Nuevo Catálogo
+                    </Button>
                 </div>
             </div>
         </div>

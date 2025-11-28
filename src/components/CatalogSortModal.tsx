@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, rectSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { X, Save, GripVertical, Loader2 } from 'lucide-react';
 import { getImagesInCatalog, updateCatalogItemPositions } from '../services/database';
 import type { ImageRecord } from '../services/database';
 import { useToast } from '../contexts/ToastContext';
+import { Button, MaterialIcon } from './ui';
 
 interface CatalogSortModalProps {
     catalogId: string;
@@ -40,15 +40,15 @@ function SortableItem({ id, url, title }: SortableItemProps) {
         <div
             ref={setNodeRef}
             style={style}
-            className="bg-zinc-900 border border-zinc-800 rounded-xl p-2 flex items-center gap-3 touch-none select-none"
+            className="bg-bronze-canvas-component-bg border border-bronze-canvas-border rounded-xl p-2 flex items-center gap-3 touch-none select-none shadow-sm"
         >
-            <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-zinc-500 hover:text-zinc-300">
-                <GripVertical size={20} />
+            <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-bronze-canvas-secondary-text hover:text-bronze-canvas-primary-text">
+                <MaterialIcon icon="drag_indicator" size={20} />
             </div>
-            <div className="w-12 h-12 rounded-lg overflow-hidden bg-zinc-800 flex-shrink-0">
+            <div className="w-12 h-12 rounded-lg overflow-hidden bg-white border border-bronze-canvas-border flex-shrink-0">
                 <img src={url} alt={title} className="w-full h-full object-cover" />
             </div>
-            <span className="text-sm text-zinc-300 font-medium line-clamp-1 flex-1">{title}</span>
+            <span className="text-sm text-bronze-canvas-primary-text font-bold line-clamp-1 flex-1">{title}</span>
         </div>
     );
 }
@@ -116,21 +116,21 @@ export function CatalogSortModal({ catalogId, catalogTitle, onClose }: CatalogSo
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl">
-                <div className="p-4 border-b border-zinc-800 flex justify-between items-center">
-                    <h3 className="font-semibold text-lg text-zinc-100">Ordenar: {catalogTitle}</h3>
-                    <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300">
-                        <X size={20} />
+            <div className="bg-bronze-canvas-background border border-bronze-canvas-border rounded-2xl w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl">
+                <div className="p-4 border-b border-bronze-canvas-border flex justify-between items-center bg-bronze-canvas-background rounded-t-2xl">
+                    <h3 className="font-bold text-lg text-bronze-canvas-primary-text">Ordenar: {catalogTitle}</h3>
+                    <button onClick={onClose} className="text-bronze-canvas-secondary-text hover:text-bronze-canvas-primary-text">
+                        <MaterialIcon icon="close" size={20} />
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4">
+                <div className="flex-1 overflow-y-auto p-4 bg-bronze-canvas-background">
                     {loading ? (
                         <div className="flex justify-center py-10">
-                            <Loader2 className="animate-spin text-zinc-500" />
+                            <MaterialIcon icon="progress_activity" className="animate-spin text-bronze-canvas-accent" size={32} />
                         </div>
                     ) : items.length === 0 ? (
-                        <div className="text-center py-10 text-zinc-500">
+                        <div className="text-center py-10 text-bronze-canvas-secondary-text">
                             Este catálogo no tiene imágenes.
                         </div>
                     ) : (
@@ -158,21 +158,21 @@ export function CatalogSortModal({ catalogId, catalogTitle, onClose }: CatalogSo
                     )}
                 </div>
 
-                <div className="p-4 border-t border-zinc-800 flex justify-end gap-3">
-                    <button
+                <div className="p-4 border-t border-bronze-canvas-border flex justify-end gap-3 bg-bronze-canvas-background rounded-b-2xl">
+                    <Button
+                        variant="ghost"
                         onClick={onClose}
-                        className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-zinc-200"
                     >
                         Cancelar
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                         onClick={handleSave}
                         disabled={saving || loading || items.length === 0}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium flex items-center gap-2"
+                        loading={saving}
+                        icon="save"
                     >
-                        {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                         Guardar Orden
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>
