@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, Grid, List, Trash2, ArrowUpDown, Edit2 } from 'lucide-react';
-import { getImages, deleteImage, updateImage } from '../services/database';
+import { Search, Filter, Grid, List, Trash2, ArrowUpDown, Edit2, CheckSquare, Square, X, FolderPlus } from 'lucide-react';
+import { getImages, deleteImage, updateImage, getCatalogs, addImageToCatalog } from '../services/database';
 import type { ImageRecord } from '../services/database';
 import { ImageEditModal } from './ImageEditModal';
 import { useToast } from '../contexts/ToastContext';
@@ -27,6 +27,7 @@ export function Gallery() {
     const [availableCategories, setAvailableCategories] = useState<string[]>([]);
     const [availableMaterials, setAvailableMaterials] = useState<string[]>([]);
     const [editingImage, setEditingImage] = useState<ImageRecord | null>(null);
+    const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
     const { showToast } = useToast();
 
     useEffect(() => {
@@ -117,6 +118,79 @@ export function Gallery() {
         }
     };
 
+    // Selection Logic
+    const toggleSelection = (id: string) => {
+        const newSelection = new Set(selectedItems);
+        if (newSelection.has(id)) {
+            newSelection.delete(id);
+        } else {
+            newSelection.add(id);
+        }
+        setSelectedItems(newSelection);
+    };
+
+    const selectAll = () => {
+        const allIds = filteredItems.map(item => item.id);
+        setSelectedItems(new Set(allIds));
+    };
+
+    const deselectAll = () => {
+        setSelectedItems(new Set());
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedItems.size === 0) return;
+        if (!confirm(`¿Estás seguro de eliminar ${selectedItems.size} imágenes?`)) return;
+
+        try {
+            const promises = Array.from(selectedItems).map(id => deleteImage(id));
+            await Promise.all(promises);
+
+            setItems(items.filter(item => !selectedItems.has(item.id)));
+            setSelectedItems(new Set());
+            showToast(`${selectedItems.size} imágenes eliminadas correctamente`, 'success');
+        } catch (error) {
+            console.error('Error deleting images:', error);
+            showToast('Error al eliminar las imágenes', 'error');
+        }
+    };
+
+    const handleBulkAddToCatalog = async () => {
+        if (selectedItems.size === 0) return;
+
+        try {
+            const catalogs = await getCatalogs();
+            if (catalogs.length === 0) {
+                showToast('No hay catálogos disponibles. Crea uno primero.', 'warning');
+                return;
+            }
+
+            const catalogList = catalogs.map((c, i) => `${i + 1}. ${c.title}`).join('\n');
+            const selection = prompt(`Selecciona el catálogo:\n${catalogList}\n\nIngresa el número:`, '1');
+
+            if (!selection) return;
+
+            const catalogIndex = parseInt(selection) - 1;
+            if (catalogIndex < 0 || catalogIndex >= catalogs.length) {
+                showToast('Selección inválida', 'error');
+                return;
+            }
+
+            const selectedCatalog = catalogs[catalogIndex];
+            const promises = Array.from(selectedItems).map(imageId =>
+                addImageToCatalog(selectedCatalog.id!, imageId)
+            );
+
+            await Promise.all(promises);
+
+            setSelectedItems(new Set());
+            showToast(`${selectedItems.size} imágenes agregadas a "${selectedCatalog.title}"`, 'success');
+        } catch (error) {
+            console.error('Error adding to catalog:', error);
+            showToast('Error al agregar al catálogo', 'error');
+        }
+    };
+
     const filteredItems = items.filter(item => {
         const matchesSearch = item.title.toLowerCase().includes(search.toLowerCase());
         const matchesCategory = category === 'Todas' || item.category === category;
@@ -201,19 +275,29 @@ export function Gallery() {
                     </select>
                 </div>
 
-                {/* View Toggle */}
-                <div className="flex items-center bg-zinc-950 border border-zinc-800 rounded-xl p-1">
+                {/* View Toggle & Selection */}
+                <div className="flex items-center bg-zinc-950 border border-zinc-800 rounded-xl p-1 gap-1">
                     <button
                         onClick={() => setView('grid')}
                         className={`p-1.5 rounded-lg transition-colors ${view === 'grid' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+                        title="Vista Cuadrícula"
                     >
                         <Grid size={16} />
                     </button>
                     <button
                         onClick={() => setView('list')}
                         className={`p-1.5 rounded-lg transition-colors ${view === 'list' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+                        title="Vista Lista"
                     >
                         <List size={16} />
+                    </button>
+                    <div className="w-px h-4 bg-zinc-800 mx-1" />
+                    <button
+                        onClick={selectedItems.size === filteredItems.length ? deselectAll : selectAll}
+                        className={`p-1.5 rounded-lg transition-colors ${selectedItems.size > 0 ? 'bg-blue-600/20 text-blue-400' : 'text-zinc-500 hover:text-zinc-300'}`}
+                        title={selectedItems.size === filteredItems.length ? "Deseleccionar Todo" : "Seleccionar Todo"}
+                    >
+                        {selectedItems.size === filteredItems.length && filteredItems.length > 0 ? <CheckSquare size={16} /> : <Square size={16} />}
                     </button>
                 </div>
             </div>
@@ -229,26 +313,47 @@ export function Gallery() {
                     <p className="text-sm mt-2">Intenta ajustar tu búsqueda o filtros</p>
                 </div>
             ) : (
-                <div className={view === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6' : 'space-y-4'}>
+                <div className={view === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 pb-20' : 'space-y-4 pb-20'}>
                     {sortedItems.map(item => (
-                        <div key={item.id} className={`group bg-zinc-900/50 border border-zinc-800 rounded-2xl overflow-hidden hover:border-zinc-600 transition-all ${view === 'list' ? 'flex gap-4 p-4' : ''}`}>
+                        <div
+                            key={item.id}
+                            className={`
+                                group bg-zinc-900/50 border rounded-2xl overflow-hidden transition-all relative
+                                ${selectedItems.has(item.id) ? 'border-blue-500/50 ring-1 ring-blue-500/50' : 'border-zinc-800 hover:border-zinc-600'}
+                                ${view === 'list' ? 'flex gap-4 p-4' : ''}
+                            `}
+                            onClick={() => toggleSelection(item.id)}
+                        >
+                            {/* Selection Checkbox */}
+                            <div className="absolute top-3 left-3 z-20">
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); toggleSelection(item.id); }}
+                                    className={`
+                                        w-6 h-6 rounded-lg flex items-center justify-center transition-all
+                                        ${selectedItems.has(item.id) ? 'bg-blue-600 text-white' : 'bg-black/40 backdrop-blur-sm text-transparent hover:bg-black/60 border border-white/20'}
+                                    `}
+                                >
+                                    <CheckSquare size={14} />
+                                </button>
+                            </div>
+
                             <div className={`relative overflow-hidden ${view === 'list' ? 'w-24 h-24 rounded-xl flex-shrink-0' : 'aspect-square'}`}>
                                 <img
                                     src={item.url}
                                     alt={item.title}
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                 />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
-                                    <div className="w-full flex gap-2">
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3 pointer-events-none">
+                                    <div className="w-full flex gap-2 pointer-events-auto">
                                         <button
-                                            onClick={() => handleEdit(item)}
+                                            onClick={(e) => { e.stopPropagation(); handleEdit(item); }}
                                             className="flex-1 py-2 bg-blue-600/80 backdrop-blur-md hover:bg-blue-600 rounded-lg text-xs font-medium text-white transition-colors flex items-center justify-center gap-1.5"
                                         >
                                             <Edit2 size={12} />
                                             Editar
                                         </button>
                                         <button
-                                            onClick={() => handleDelete(item.id, item.title)}
+                                            onClick={(e) => { e.stopPropagation(); handleDelete(item.id, item.title); }}
                                             className="flex-1 py-2 bg-red-600/80 backdrop-blur-md hover:bg-red-600 rounded-lg text-xs font-medium text-white transition-colors flex items-center justify-center gap-1.5"
                                         >
                                             <Trash2 size={12} />
@@ -267,6 +372,40 @@ export function Gallery() {
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* Bulk Actions Bar */}
+            {selectedItems.size > 0 && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-zinc-900 border border-zinc-700 shadow-2xl rounded-2xl px-6 py-3 flex items-center gap-6 z-50 animate-in slide-in-from-bottom-10 fade-in duration-300">
+                    <div className="flex items-center gap-3 border-r border-zinc-700 pr-6">
+                        <span className="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-md">{selectedItems.size}</span>
+                        <span className="text-sm font-medium text-zinc-200">Seleccionados</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleBulkAddToCatalog}
+                            className="flex items-center gap-2 px-3 py-2 hover:bg-zinc-800 rounded-lg text-sm font-medium text-zinc-200 transition-colors"
+                        >
+                            <FolderPlus size={16} />
+                            Agregar a Catálogo
+                        </button>
+                        <button
+                            onClick={handleBulkDelete}
+                            className="flex items-center gap-2 px-3 py-2 hover:bg-red-900/20 rounded-lg text-sm font-medium text-red-400 transition-colors"
+                        >
+                            <Trash2 size={16} />
+                            Eliminar
+                        </button>
+                    </div>
+
+                    <button
+                        onClick={deselectAll}
+                        className="ml-2 p-1 hover:bg-zinc-800 rounded-full text-zinc-500 hover:text-zinc-300 transition-colors"
+                    >
+                        <X size={18} />
+                    </button>
                 </div>
             )}
 
