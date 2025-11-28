@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Plus, Share2, Eye, MoreVertical, Loader2, Trash2, Edit2, Image as ImageIcon, ArrowUpDown } from 'lucide-react';
 import { getCatalogs, createCatalog, deleteCatalog, updateCatalog, getImagesInCatalog } from '../services/database';
 import type { CatalogWithItems } from '../services/database';
 import { useToast } from '../contexts/ToastContext';
 import { CatalogSortModal } from './CatalogSortModal';
+import { Button, MaterialIcon } from './ui';
 
 export function CatalogManager() {
     const [catalogs, setCatalogs] = useState<CatalogWithItems[]>([]);
@@ -133,32 +133,31 @@ export function CatalogManager() {
     };
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="flex justify-between items-center bg-zinc-900/50 p-6 rounded-2xl border border-zinc-800">
+        <div className="space-y-6 animate-in fade-in duration-500 pb-24">
+            <div className="flex justify-between items-center bg-bronze-canvas-component-bg p-6 rounded-2xl border border-bronze-canvas-border">
                 <div>
-                    <h2 className="text-xl font-semibold text-zinc-200">Mis Catálogos</h2>
-                    <p className="text-sm text-zinc-500 mt-1">Gestiona y comparte tus catálogos digitales</p>
+                    <h2 className="text-xl font-bold text-bronze-canvas-primary-text">Mis Catálogos</h2>
+                    <p className="text-sm text-bronze-canvas-secondary-text mt-1">Gestiona y comparte tus catálogos digitales</p>
                 </div>
-                <button
+                <Button
                     onClick={handleCreateCatalog}
-                    disabled={creating}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-colors"
+                    loading={creating}
+                    icon="add"
                 >
-                    {creating ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
                     Nuevo Catálogo
-                </button>
+                </Button>
             </div>
 
             {loading ? (
                 <div className="flex items-center justify-center py-20">
-                    <div className="text-zinc-500">Cargando catálogos...</div>
+                    <MaterialIcon icon="progress_activity" className="animate-spin text-bronze-canvas-accent" size={32} />
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {catalogs.map(catalog => (
-                        <div key={catalog.id} className="bg-zinc-900/50 border border-zinc-800 rounded-2xl group hover:border-zinc-700 transition-all flex flex-col relative">
-                            {/* Image Container - Rounded Top only */}
-                            <div className="relative h-48 overflow-hidden rounded-t-2xl" style={{ backgroundColor: catalog.background_color || '#ffffff' }}>
+                        <div key={catalog.id} className="bg-bronze-canvas-component-bg border border-bronze-canvas-border rounded-2xl group hover:border-bronze-canvas-accent transition-all flex flex-col relative overflow-hidden">
+                            {/* Image Container */}
+                            <div className="relative h-48 overflow-hidden bg-white" style={{ backgroundColor: catalog.background_color || '#ffffff' }}>
                                 {catalog.cover_url ? (
                                     <img
                                         src={catalog.cover_url}
@@ -166,14 +165,14 @@ export function CatalogManager() {
                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                     />
                                 ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-zinc-400">
+                                    <div className="w-full h-full flex items-center justify-center text-bronze-canvas-border">
                                         <div className="text-center">
-                                            <Plus size={48} className="mx-auto mb-2 opacity-30" />
-                                            <p className="text-sm">Sin imagen de portada</p>
+                                            <MaterialIcon icon="image_not_supported" size={48} className="mx-auto mb-2 opacity-50" />
+                                            <p className="text-sm font-medium">Sin portada</p>
                                         </div>
                                     </div>
                                 )}
-                                <div className="absolute top-4 right-4 px-2 py-1 bg-black/60 backdrop-blur-md rounded-lg text-xs font-medium text-white capitalize">
+                                <div className="absolute top-4 right-4 px-2 py-1 bg-white/80 backdrop-blur-md rounded-lg text-xs font-bold text-bronze-canvas-primary-text capitalize shadow-sm">
                                     {catalog.status === 'draft' ? 'Borrador' : 'Publicado'}
                                 </div>
                             </div>
@@ -181,65 +180,65 @@ export function CatalogManager() {
                             <div className="p-5 flex-1 flex flex-col">
                                 <div className="flex justify-between items-start mb-4 relative">
                                     <div className="flex-1 pr-8">
-                                        <h3 className="font-semibold text-zinc-200 text-lg line-clamp-1" title={catalog.title}>{catalog.title}</h3>
-                                        <p className="text-sm text-zinc-500">{catalog.itemCount || 0} artículos</p>
+                                        <h3 className="font-bold text-bronze-canvas-primary-text text-lg line-clamp-1" title={catalog.title}>{catalog.title}</h3>
+                                        <p className="text-sm text-bronze-canvas-secondary-text">{catalog.itemCount || 0} artículos</p>
                                     </div>
 
-                                    {/* Menu Button - Positioned absolutely but outside overflow hidden */}
+                                    {/* Menu Button */}
                                     <div className="absolute right-0 top-0">
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 setShowMenu(showMenu === catalog.id ? null : catalog.id!);
                                             }}
-                                            className="text-zinc-500 hover:text-zinc-300 p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                                            className="text-bronze-canvas-secondary-text hover:text-bronze-canvas-primary-text p-2 hover:bg-bronze-canvas-background rounded-full transition-colors"
                                         >
-                                            <MoreVertical size={18} />
+                                            <MaterialIcon icon="more_vert" size={20} />
                                         </button>
 
                                         {showMenu === catalog.id && (
-                                            <div className="absolute right-0 top-full mt-2 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl overflow-hidden z-50 min-w-[200px]">
+                                            <div className="absolute right-0 top-full mt-2 bg-white border border-bronze-canvas-border rounded-xl shadow-xl overflow-hidden z-50 min-w-[220px]">
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handlePreview(catalog); }}
-                                                    className="w-full px-4 py-3 text-left text-sm hover:bg-zinc-800 transition-colors flex items-center gap-3 text-zinc-300 hover:text-white"
+                                                    className="w-full px-4 py-3 text-left text-sm hover:bg-bronze-canvas-background transition-colors flex items-center gap-3 text-bronze-canvas-primary-text"
                                                 >
-                                                    <Eye size={16} />
+                                                    <MaterialIcon icon="visibility" size={18} />
                                                     Vista Previa
                                                 </button>
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); setSortCatalog(catalog); setShowMenu(null); }}
-                                                    className="w-full px-4 py-3 text-left text-sm hover:bg-zinc-800 transition-colors flex items-center gap-3 text-zinc-300 hover:text-white"
+                                                    className="w-full px-4 py-3 text-left text-sm hover:bg-bronze-canvas-background transition-colors flex items-center gap-3 text-bronze-canvas-primary-text"
                                                 >
-                                                    <ArrowUpDown size={16} />
+                                                    <MaterialIcon icon="sort" size={18} />
                                                     Ordenar Items
                                                 </button>
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleEdit(catalog); }}
-                                                    className="w-full px-4 py-3 text-left text-sm hover:bg-zinc-800 transition-colors flex items-center gap-3 text-zinc-300 hover:text-white"
+                                                    className="w-full px-4 py-3 text-left text-sm hover:bg-bronze-canvas-background transition-colors flex items-center gap-3 text-bronze-canvas-primary-text"
                                                 >
-                                                    <Edit2 size={16} />
+                                                    <MaterialIcon icon="edit" size={18} />
                                                     Editar Datos
                                                 </button>
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleSetCover(catalog); }}
-                                                    className="w-full px-4 py-3 text-left text-sm hover:bg-zinc-800 transition-colors flex items-center gap-3 text-zinc-300 hover:text-white"
+                                                    className="w-full px-4 py-3 text-left text-sm hover:bg-bronze-canvas-background transition-colors flex items-center gap-3 text-bronze-canvas-primary-text"
                                                 >
-                                                    <ImageIcon size={16} />
+                                                    <MaterialIcon icon="image" size={18} />
                                                     Usar 1ª imagen como portada
                                                 </button>
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleShare(catalog); }}
-                                                    className="w-full px-4 py-3 text-left text-sm hover:bg-zinc-800 transition-colors flex items-center gap-3 text-zinc-300 hover:text-white"
+                                                    className="w-full px-4 py-3 text-left text-sm hover:bg-bronze-canvas-background transition-colors flex items-center gap-3 text-bronze-canvas-primary-text"
                                                 >
-                                                    <Share2 size={16} />
+                                                    <MaterialIcon icon="share" size={18} />
                                                     Compartir
                                                 </button>
-                                                <div className="h-px bg-zinc-800 my-1" />
+                                                <div className="h-px bg-bronze-canvas-border my-1" />
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleDelete(catalog); }}
-                                                    className="w-full px-4 py-3 text-left text-sm hover:bg-red-900/20 text-red-400 hover:text-red-300 transition-colors flex items-center gap-3"
+                                                    className="w-full px-4 py-3 text-left text-sm hover:bg-red-50 text-red-500 hover:text-red-600 transition-colors flex items-center gap-3"
                                                 >
-                                                    <Trash2 size={16} />
+                                                    <MaterialIcon icon="delete" size={18} />
                                                     Eliminar
                                                 </button>
                                             </div>
@@ -247,21 +246,25 @@ export function CatalogManager() {
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-3 pt-4 border-t border-zinc-800 mt-auto">
-                                    <button
+                                <div className="flex items-center gap-3 pt-4 border-t border-bronze-canvas-border mt-auto">
+                                    <Button
+                                        variant="secondary"
+                                        fullWidth
+                                        size="sm"
                                         onClick={() => handlePreview(catalog)}
-                                        className="flex-1 flex items-center justify-center gap-2 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm font-medium transition-colors"
+                                        icon="visibility"
                                     >
-                                        <Eye size={16} />
-                                        Vista Previa
-                                    </button>
-                                    <button
+                                        Ver
+                                    </Button>
+                                    <Button
+                                        variant="secondary"
+                                        fullWidth
+                                        size="sm"
                                         onClick={() => handleShare(catalog)}
-                                        className="flex-1 flex items-center justify-center gap-2 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm font-medium transition-colors"
+                                        icon="share"
                                     >
-                                        <Share2 size={16} />
                                         Compartir
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
                         </div>
@@ -270,16 +273,16 @@ export function CatalogManager() {
                     <button
                         onClick={handleCreateCatalog}
                         disabled={creating}
-                        className="flex flex-col items-center justify-center h-full min-h-[300px] border-2 border-dashed border-zinc-800 rounded-2xl hover:border-zinc-700 hover:bg-zinc-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all group cursor-pointer"
+                        className="flex flex-col items-center justify-center h-full min-h-[300px] border-2 border-dashed border-bronze-canvas-border rounded-2xl hover:border-bronze-canvas-accent hover:bg-bronze-canvas-component-bg/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all group cursor-pointer bg-bronze-canvas-background"
                     >
-                        <div className="w-16 h-16 rounded-full bg-zinc-900 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg">
+                        <div className="w-16 h-16 rounded-full bg-bronze-canvas-component-bg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-sm">
                             {creating ? (
-                                <Loader2 size={32} className="text-zinc-500 animate-spin" />
+                                <MaterialIcon icon="progress_activity" size={32} className="text-bronze-canvas-accent animate-spin" />
                             ) : (
-                                <Plus size={32} className="text-zinc-500 group-hover:text-zinc-300" />
+                                <MaterialIcon icon="add" size={32} className="text-bronze-canvas-secondary-text group-hover:text-bronze-canvas-accent" />
                             )}
                         </div>
-                        <span className="font-medium text-zinc-400 group-hover:text-zinc-200 text-lg">Crear Nuevo Catálogo</span>
+                        <span className="font-bold text-bronze-canvas-secondary-text group-hover:text-bronze-canvas-primary-text text-lg transition-colors">Crear Nuevo Catálogo</span>
                     </button>
                 </div>
             )}
