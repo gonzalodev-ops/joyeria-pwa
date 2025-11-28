@@ -10,7 +10,7 @@ import { CatalogSelector } from './components/CatalogSelector';
 import { SaveImageDialog } from './components/SaveImageDialog';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { useToast } from './contexts/ToastContext';
-import { Sparkles, Image as ImageIcon, Layers, Loader2, Lightbulb, Settings, Wand2 } from 'lucide-react';
+import { useTheme } from './contexts/ThemeContext';
 import { removeBackground } from './services/photoroom';
 import { analyzeJewelryImage } from './services/gemini';
 import type { JewelryMetadata } from './services/gemini';
@@ -19,8 +19,13 @@ import type { CloudinaryEnhancement } from './services/cloudinary';
 import { saveImage, getCatalogs, addImageToCatalog, getImages } from './services/database';
 import { InstallPrompt } from './components/InstallPrompt';
 
+// New UI Components
+import { Button, Card, StatsCard, MaterialIcon } from './components/ui';
+
 function AppContent() {
   const { showToast } = useToast();
+  const { theme } = useTheme();
+
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [metadata, setMetadata] = useState<JewelryMetadata | null>(null);
@@ -39,11 +44,6 @@ function AppContent() {
   const [showCatalogSelector, setShowCatalogSelector] = useState(false);
 
   const canvasEditorRef = useRef<CanvasEditorRef>(null);
-
-  // Debug: Monitor metadata changes
-  useEffect(() => {
-    console.log('DEBUG: Metadata state updated:', metadata);
-  }, [metadata]);
 
   // Load stats
   useEffect(() => {
@@ -69,7 +69,7 @@ function AppContent() {
     setSelectedImage(file);
     setProcessedImage(null);
     setMetadata(null);
-    console.log('Selected image:', file.name);
+    // Auto process on select could be added here if desired
   };
 
   const handleProcessAll = async () => {
@@ -80,13 +80,11 @@ function AppContent() {
 
     try {
       // 1. Remove Background
-      console.log('Starting auto-process: Removing background...');
       const blob = await removeBackground(selectedImage);
       const url = URL.createObjectURL(blob);
       setProcessedImage(url);
 
       // 2. Analyze Image
-      console.log('Starting auto-process: Analyzing image...');
       const originalUrl = URL.createObjectURL(selectedImage);
       const analysis = await analyzeJewelryImage(originalUrl);
       setMetadata(analysis);
@@ -94,47 +92,9 @@ function AppContent() {
 
     } catch (error) {
       console.error('Error in auto-process:', error);
-      showToast('Error durante el procesamiento automático. Verifica tu conexión.', 'error');
+      showToast('Error durante el procesamiento automático.', 'error');
     } finally {
       setIsProcessing(false);
-      setIsAnalyzing(false);
-    }
-  };
-
-  const handleRemoveBackground = async () => {
-    if (!selectedImage) return;
-
-    setIsProcessing(true);
-    try {
-      const blob = await removeBackground(selectedImage);
-      const url = URL.createObjectURL(blob);
-      setProcessedImage(url);
-    } catch (error) {
-      console.error('Error removing background:', error);
-      alert('Failed to remove background. Please checks your API key.');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleAnalyzeLighting = async () => {
-    if (!selectedImage) return;
-
-    setIsAnalyzing(true);
-    try {
-      const imageUrl = URL.createObjectURL(selectedImage);
-      const result = await analyzeJewelryImage(imageUrl);
-      console.log('DEBUG: Gemini analysis result:', result);
-
-      if (!result) {
-        throw new Error('Analysis returned empty result');
-      }
-
-      setMetadata(result);
-    } catch (error) {
-      console.error('Error analyzing image:', error);
-      alert('Failed to analyze image.');
-    } finally {
       setIsAnalyzing(false);
     }
   };
@@ -146,10 +106,7 @@ function AppContent() {
     }
 
     if (!metadata) {
-      const proceed = confirm('No se ha generado metadata con IA. ¿Deseas guardar la imagen de todos modos?');
-      if (!proceed) return;
-
-      // Create dummy metadata to allow manual entry
+      // Create dummy metadata
       const dummyMetadata: JewelryMetadata = {
         title: '',
         category: 'Otro',
@@ -180,10 +137,8 @@ function AppContent() {
       const dataURL = canvasEditorRef.current.getCanvasDataURL();
       if (!dataURL) throw new Error('Failed to get canvas data');
 
-      // Upload to Cloudinary with enhancements
       const cloudinaryUrl = await uploadWithEnhancement(dataURL, enhancements);
 
-      // Save image to database
       const savedImage = await saveImage({
         url: cloudinaryUrl,
         original_url: selectedImage ? URL.createObjectURL(selectedImage) : undefined,
@@ -199,13 +154,12 @@ function AppContent() {
         },
       });
 
-      // If destination is catalog, add to catalog
       if (destination === 'catalog' && catalogId && savedImage?.id) {
         await addImageToCatalog(catalogId, savedImage.id);
-        showToast('Imagen guardada y agregada al catálogo exitosamente!', 'success');
+        showToast('Guardado en catálogo exitosamente', 'success');
         setActiveTab('catalogs');
       } else {
-        showToast('Imagen guardada en galería exitosamente!', 'success');
+        showToast('Guardado en galería exitosamente', 'success');
         setActiveTab('gallery');
       }
 
@@ -218,7 +172,6 @@ function AppContent() {
     }
   };
 
-  // Simple save to gallery (without full metadata flow)
   const handleSimpleSaveToGallery = async (metadata: { title: string; category: string; material?: string; description?: string }) => {
     if (!canvasEditorRef.current || !processedImage) return;
 
@@ -227,10 +180,8 @@ function AppContent() {
       const dataURL = canvasEditorRef.current.getCanvasDataURL();
       if (!dataURL) throw new Error('Failed to get canvas data');
 
-      // Upload to Cloudinary
       const cloudinaryUrl = await uploadDataURLToCloudinary(dataURL);
 
-      // Save to database
       await saveImage({
         url: cloudinaryUrl,
         title: metadata.title,
@@ -242,7 +193,7 @@ function AppContent() {
         },
       });
 
-      showToast('Imagen guardada en galería exitosamente!', 'success');
+      showToast('Guardado en galería exitosamente', 'success');
       loadStats();
       setActiveTab('gallery');
     } catch (error) {
@@ -253,7 +204,6 @@ function AppContent() {
     }
   };
 
-  // Export to catalog
   const handleExportToCatalog = async (catalogId: string) => {
     if (!canvasEditorRef.current || !processedImage) return;
 
@@ -264,10 +214,8 @@ function AppContent() {
       const dataURL = canvasEditorRef.current.getCanvasDataURL();
       if (!dataURL) throw new Error('Failed to get canvas data');
 
-      // Upload to Cloudinary
       const cloudinaryUrl = await uploadDataURLToCloudinary(dataURL);
 
-      // Save image to database
       const savedImage = await saveImage({
         url: cloudinaryUrl,
         title: metadata?.title || 'Untitled',
@@ -279,10 +227,9 @@ function AppContent() {
         },
       });
 
-      // Add to catalog
       if (savedImage?.id) {
         await addImageToCatalog(catalogId, savedImage.id);
-        showToast('Imagen exportada al catálogo exitosamente!', 'success');
+        showToast('Exportado al catálogo exitosamente', 'success');
         loadStats();
         setActiveTab('catalogs');
       }
@@ -294,245 +241,181 @@ function AppContent() {
     }
   };
 
+  // Render Content based on active tab
+  const renderContent = () => {
+    if (activeTab === 'gallery') return <Gallery />;
+    if (activeTab === 'catalogs') return <CatalogManager />;
 
-  return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-blue-500/30">
-      <InstallPrompt />
-      <header className="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-md sticky top-0 z-[100000]">
-        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
-              <Sparkles size={18} className="text-white" />
+    // Studio / Upload Tab
+    return (
+      <div className="flex flex-col gap-6">
+        {/* Upload Area */}
+        {!selectedImage ? (
+          <div className="flex flex-col items-center gap-6 rounded-xl border-2 border-dashed border-bronze-canvas-border px-6 py-14 flex-grow justify-center bg-bronze-canvas-background">
+            <div className="flex justify-center items-center size-20 rounded-full bg-bronze-canvas-component-bg">
+              <MaterialIcon icon="upload_file" size={40} className="text-bronze-canvas-secondary-text" />
             </div>
-            <h1 className="font-bold text-lg tracking-tight">Jewelry AI Studio</h1>
+            <div className="flex max-w-[480px] flex-col items-center gap-2">
+              <p className="text-bronze-canvas-primary-text text-lg font-bold leading-tight tracking-[-0.015em] text-center">
+                Toca para seleccionar una imagen
+              </p>
+              <p className="text-bronze-canvas-secondary-text text-sm font-normal leading-normal text-center">
+                Formatos soportados: JPG, PNG, WEBP. Máx 10MB
+              </p>
+            </div>
+            <div className="w-full max-w-[480px]">
+              <ImageUploader onImageSelect={handleImageSelect} className="border-none h-auto p-0" />
+            </div>
           </div>
-          <nav className="flex items-center gap-4 md:gap-6 text-sm font-medium text-zinc-400">
-            <button
-              onClick={() => setActiveTab('studio')}
-              className={`transition-colors ${activeTab === 'studio' ? 'text-white' : 'hover:text-white'}`}
-            >
-              Studio
-            </button>
-            <button
-              onClick={() => setActiveTab('gallery')}
-              className={`transition-colors ${activeTab === 'gallery' ? 'text-white' : 'hover:text-white'}`}
-            >
-              Gallery
-            </button>
-            <button
-              onClick={() => setActiveTab('catalogs')}
-              className={`transition-colors ${activeTab === 'catalogs' ? 'text-white' : 'hover:text-white'}`}
-            >
-              Catalogs
-            </button>
-          </nav>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowSettings(true)}
-              className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors"
-            >
-              <Settings size={16} />
-            </button>
-            <div className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700"></div>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-5xl mx-auto px-4 py-8">
-        {activeTab === 'gallery' ? (
-          <Gallery />
-        ) : activeTab === 'catalogs' ? (
-          <CatalogManager />
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main Workspace */}
-            <div className="lg:col-span-2 space-y-6">
-              <section className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6">
-                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                  <ImageIcon size={20} className="text-blue-400" />
-                  Source Image
-                </h2>
-                <ImageUploader onImageSelect={handleImageSelect} />
-              </section>
+          <div className="flex flex-col gap-6 animate-in fade-in duration-500">
+            {/* Processing View */}
+            <div className="bg-bronze-canvas-component-bg rounded-xl border border-bronze-canvas-border p-4">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-bold text-bronze-canvas-primary-text">Estudio de Edición</h2>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedImage(null)} icon="close">
+                  Cancelar
+                </Button>
+              </div>
 
-              {selectedImage && (
-                <section className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                    <Layers size={20} className="text-purple-400" />
-                    Processing Pipeline
-                  </h2>
+              {processedImage ? (
+                <CanvasEditor
+                  ref={canvasEditorRef}
+                  imageSrc={processedImage}
+                  title={metadata?.title}
+                  className="mb-4"
+                />
+              ) : (
+                <div className="aspect-square w-full bg-bronze-canvas-background rounded-lg flex items-center justify-center mb-4">
+                  <img
+                    src={URL.createObjectURL(selectedImage)}
+                    alt="Original"
+                    className="max-h-full max-w-full object-contain opacity-50"
+                  />
+                </div>
+              )}
 
-                  <div className="space-y-4">
-                    {/* Process All Button */}
-                    <div className="p-4 bg-gradient-to-r from-blue-900/20 to-purple-900/20 rounded-xl border border-blue-500/30 flex items-center justify-between group hover:border-blue-500/50 transition-all cursor-pointer shadow-lg shadow-blue-900/10">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white shadow-md">
-                          <Sparkles size={20} />
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-zinc-100">Procesamiento Automático</h3>
-                          <p className="text-xs text-zinc-400">Eliminar fondo + Analizar con IA</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={handleProcessAll}
-                        disabled={isProcessing || isAnalyzing}
-                        className="px-4 py-2 text-sm font-bold bg-white text-black hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center gap-2 shadow-sm"
-                      >
-                        {(isProcessing || isAnalyzing) ? (
-                          <>
-                            <Loader2 size={16} className="animate-spin" />
-                            Procesando...
-                          </>
-                        ) : (
-                          <>
-                            <Wand2 size={16} />
-                            ✨ Procesar Todo
-                          </>
-                        )}
-                      </button>
-                    </div>
-
-                    <div className="flex items-center gap-4 py-2">
-                      <div className="h-px flex-1 bg-zinc-800"></div>
-                      <span className="text-xs text-zinc-500 font-medium uppercase tracking-wider">O pasos individuales</span>
-                      <div className="h-px flex-1 bg-zinc-800"></div>
-                    </div>
-
-                    <div className="p-4 bg-zinc-950/50 rounded-xl border border-zinc-800/50 flex items-center justify-between group hover:border-zinc-700 transition-colors cursor-pointer">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
-                          <Layers size={20} />
-                        </div>
-                        <div>
-                          <h3 className="font-medium">Remove Background</h3>
-                          <p className="text-xs text-zinc-500">Using PhotoRoom AI</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={handleRemoveBackground}
-                        disabled={isProcessing}
-                        className="px-3 py-1.5 text-xs font-medium bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center gap-2"
-                      >
-                        {isProcessing ? (
-                          <>
-                            <Loader2 size={14} className="animate-spin" />
-                            Processing...
-                          </>
-                        ) : (
-                          'Process'
-                        )}
-                      </button>
-                    </div>
-
-                    <div className="p-4 bg-zinc-950/50 rounded-xl border border-zinc-800/50 flex items-center justify-between group hover:border-zinc-700 transition-colors cursor-pointer">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400">
-                          <Sparkles size={20} />
-                        </div>
-                        <div>
-                          <h3 className="font-medium">Enhance Lighting & Metadata</h3>
-                          <p className="text-xs text-zinc-500">Using Gemini 2.5 Flash</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={handleAnalyzeLighting}
-                        disabled={isAnalyzing}
-                        className="px-3 py-1.5 text-xs font-medium bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center gap-2"
-                      >
-                        {isAnalyzing ? (
-                          <>
-                            <Loader2 size={14} className="animate-spin" />
-                            Analyzing...
-                          </>
-                        ) : (
-                          'Analyze'
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  {metadata && (
-                    <div className="mt-6 pt-6 border-t border-zinc-800 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                      <h3 className="font-semibold mb-4 text-zinc-200 flex items-center gap-2">
-                        <Lightbulb size={18} className="text-yellow-400" />
-                        AI Analysis
-                      </h3>
-                      <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-sm text-yellow-200/90 leading-relaxed">
-                        <p className="font-medium mb-2">{metadata.title}</p>
-                        <p className="mb-2">{metadata.description}</p>
-                        <div className="flex flex-wrap gap-2 mt-3">
-                          {metadata.keywords.map((k, i) => (
-                            <span key={i} className="px-2 py-0.5 bg-yellow-500/20 rounded text-xs">{k}</span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {processedImage && (
-                    <div className="mt-6 pt-6 border-t border-zinc-800 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                      <h3 className="font-semibold mb-4 text-zinc-200">Result & Composition</h3>
-                      <CanvasEditor
-                        ref={canvasEditorRef}
-                        imageSrc={processedImage}
-                        title={metadata?.title}
-                      />
-                    </div>
-                  )}
-                </section>
+              {!processedImage && (
+                <div className="flex flex-col gap-3">
+                  <Button
+                    fullWidth
+                    onClick={handleProcessAll}
+                    loading={isProcessing || isAnalyzing}
+                    icon="auto_awesome"
+                  >
+                    Procesar Imagen (AI)
+                  </Button>
+                </div>
               )}
             </div>
 
-            {/* Sidebar / Tools */}
-            <div className="space-y-6">
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6 sticky top-24">
-                <h3 className="font-semibold mb-4 text-zinc-200">Quick Actions</h3>
-                <div className="space-y-2">
-                  <button
-                    onClick={initiateSave}
-                    disabled={!processedImage || isSaving}
-                    className="w-full flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-sm font-medium transition-colors text-left"
-                  >
-                    {isSaving ? <Loader2 size={16} className="animate-spin" /> : <ImageIcon size={16} />}
-                    Guardar Imagen
-                  </button>
-                  <button
-                    onClick={() => setShowSaveDialog(true)}
-                    disabled={!processedImage || isSaving}
-                    className="w-full flex items-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-sm font-medium transition-colors text-left"
-                  >
-                    <ImageIcon size={16} />
-                    Guardar en Galería
-                  </button>
-                  <button
-                    onClick={() => setShowCatalogSelector(true)}
-                    disabled={!processedImage || isSaving}
-                    className="w-full flex items-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-sm font-medium transition-colors text-left"
-                  >
-                    <Layers size={16} />
-                    Exportar a Catálogo
-                  </button>
+            {metadata && (
+              <Card>
+                <div className="flex items-center gap-2 mb-3">
+                  <MaterialIcon icon="lightbulb" className="text-bronze-canvas-accent" />
+                  <h3 className="font-bold text-bronze-canvas-primary-text">Análisis AI</h3>
                 </div>
-
-                <div className="mt-8 pt-6 border-t border-zinc-800">
-                  <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Estadísticas del Proyecto</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-zinc-950/50 p-3 rounded-lg text-center">
-                      <div className="text-xl font-bold text-white">{stats.processed}</div>
-                      <div className="text-[10px] text-zinc-500">PROCESADAS</div>
-                    </div>
-                    <div className="bg-zinc-950/50 p-3 rounded-lg text-center">
-                      <div className="text-xl font-bold text-white">{stats.catalogs}</div>
-                      <div className="text-[10px] text-zinc-500">CATÁLOGOS</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+                <p className="text-sm text-bronze-canvas-primary-text font-medium">{metadata.title}</p>
+                <p className="text-xs text-bronze-canvas-secondary-text mt-1">{metadata.description}</p>
+              </Card>
+            )}
           </div>
         )}
+
+        {/* Stats Section - Only show on home/upload screen when no image selected */}
+        {!selectedImage && (
+          <div className="flex flex-wrap gap-4">
+            <StatsCard label="Piezas Procesadas" value={stats.processed} className="flex-1 min-w-[150px]" />
+            <StatsCard label="Catálogos Creados" value={stats.catalogs} className="flex-1 min-w-[150px]" />
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden bg-bronze-canvas-background font-display transition-colors duration-200">
+      <InstallPrompt />
+
+      {/* Sticky Header */}
+      <header className="flex items-center p-4 pb-2 justify-between bg-bronze-canvas-background sticky top-0 z-10 border-b border-transparent transition-all duration-200">
+        <div className="flex size-10 shrink-0 items-center justify-center">
+          <button onClick={() => setActiveTab('studio')} className="text-bronze-canvas-primary-text">
+            <MaterialIcon icon="menu" size={24} />
+          </button>
+        </div>
+        <h1 className="flex-1 text-center text-lg font-bold leading-tight tracking-[-0.015em] text-bronze-canvas-primary-text">
+          {activeTab === 'studio' ? 'Cargar Pieza de Joyería' :
+            activeTab === 'gallery' ? 'Galería de Joyería' : 'Mis Catálogos'}
+        </h1>
+        <div className="flex size-10 shrink-0 items-center justify-center">
+          <button onClick={() => setShowSettings(true)} className="text-bronze-canvas-primary-text">
+            <MaterialIcon icon="settings" size={24} />
+          </button>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-grow flex flex-col p-4">
+        {renderContent()}
       </main>
+
+      {/* Sticky Footer - Only show actions when image is processed */}
+      {selectedImage && processedImage && activeTab === 'studio' && (
+        <footer className="sticky bottom-0 bg-bronze-canvas-background/80 backdrop-blur-sm p-4 pt-2 border-t border-bronze-canvas-border z-10">
+          <div className="flex flex-1 gap-3 max-w-[480px] flex-col items-stretch mx-auto">
+            <Button
+              fullWidth
+              variant="primary"
+              size="lg"
+              onClick={() => setShowCatalogSelector(true)}
+              disabled={isSaving}
+              icon="auto_stories"
+            >
+              Exportar a Catálogo
+            </Button>
+            <Button
+              fullWidth
+              variant="secondary"
+              size="lg"
+              onClick={() => setShowSaveDialog(true)}
+              disabled={isSaving}
+              icon="photo_library"
+            >
+              Guardar en Galería
+            </Button>
+          </div>
+        </footer>
+      )}
+
+      {/* Navigation Footer (if no image selected) - Optional, to switch tabs */}
+      {!selectedImage && (
+        <footer className="sticky bottom-0 bg-bronze-canvas-background/80 backdrop-blur-sm p-2 border-t border-bronze-canvas-border z-10">
+          <div className="flex justify-around items-center">
+            <button
+              onClick={() => setActiveTab('studio')}
+              className={`flex flex-col items-center p-2 ${activeTab === 'studio' ? 'text-bronze-canvas-accent' : 'text-bronze-canvas-secondary-text'}`}
+            >
+              <MaterialIcon icon="upload_file" filled={activeTab === 'studio'} />
+              <span className="text-[10px] font-bold mt-1">Cargar</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('gallery')}
+              className={`flex flex-col items-center p-2 ${activeTab === 'gallery' ? 'text-bronze-canvas-accent' : 'text-bronze-canvas-secondary-text'}`}
+            >
+              <MaterialIcon icon="photo_library" filled={activeTab === 'gallery'} />
+              <span className="text-[10px] font-bold mt-1">Galería</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('catalogs')}
+              className={`flex flex-col items-center p-2 ${activeTab === 'catalogs' ? 'text-bronze-canvas-accent' : 'text-bronze-canvas-secondary-text'}`}
+            >
+              <MaterialIcon icon="auto_stories" filled={activeTab === 'catalogs'} />
+              <span className="text-[10px] font-bold mt-1">Catálogos</span>
+            </button>
+          </div>
+        </footer>
+      )}
 
       {/* Modals */}
       {showSaveModal && metadata && canvasEditorRef.current && (
