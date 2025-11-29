@@ -313,7 +313,17 @@ A pesar del éxito visual, existen áreas del código que requieren atención pa
 - [ ] Configurar Lighthouse CI.
 - [ ] Implementar code splitting por rutas.
 
-### **Fase 4: Testing (2-3 semanas)**
+### **Fase 4: SaaS Features (En Progreso)**
+**Prioridad: ALTA**
+- [x] Diseñar arquitectura de procesamiento por lotes (`BATCH_PROCESSING_SYSTEM.md`).
+- [x] Crear esquema de base de datos para Jobs y Items.
+- [x] Implementar servicio frontend de Batch Processing.
+- [x] Crear UI de carga múltiple y progreso (`BatchProgressModal`).
+- [ ] Implementar Edge Function para procesamiento de colas.
+- [ ] Configurar Cron Job para workers.
+- [ ] Dashboard de historial de trabajos.
+
+### **Fase 5: Testing (2-3 semanas)**
 **Prioridad: MEDIA**
 - [ ] Setup de Vitest + Testing Library.
 - [ ] Tests unitarios de componentes UI base.
@@ -321,7 +331,7 @@ A pesar del éxito visual, existen áreas del código que requieren atención pa
 - [ ] Configurar CI/CD con tests automáticos.
 - [ ] Implementar visual regression testing.
 
-### **Fase 5: UX Enhancements (1-2 semanas)**
+### **Fase 6: UX Enhancements (1-2 semanas)**
 **Prioridad: MEDIA**
 - [ ] Implementar skeleton screens.
 - [ ] Añadir transiciones suaves entre vistas.
@@ -329,7 +339,7 @@ A pesar del éxito visual, existen áreas del código que requieren atención pa
 - [ ] Mejorar feedback de carga y estados vacíos.
 - [ ] Tutorial de onboarding para nuevos usuarios.
 
-### **Fase 6: Resiliencia y Monitoreo (1 semana)**
+### **Fase 7: Resiliencia y Monitoreo (1 semana)**
 **Prioridad: MEDIA-BAJA**
 - [ ] Implementar retry logic con exponential backoff.
 - [ ] Integrar Sentry para error tracking.
@@ -337,7 +347,7 @@ A pesar del éxito visual, existen áreas del código que requieren atención pa
 - [ ] Mejorar capacidades offline (Service Worker avanzado).
 - [ ] Dashboard de métricas de uso.
 
-### **Fase 7: Seguridad Avanzada (1 semana)**
+### **Fase 8: Seguridad Avanzada (1 semana)**
 **Prioridad: BAJA (si no hay multi-usuario)**
 - [ ] Implementar rotación de API keys.
 - [ ] Configurar Supabase RLS (si se añade auth).
