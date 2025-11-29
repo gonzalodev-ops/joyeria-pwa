@@ -89,5 +89,268 @@ A pesar del éxito visual, existen áreas del código que requieren atención pa
 3.  **Mediano Plazo (Features):**
     *   Implementar Skeletons.
     *   Añadir gestos móviles.
+    *   Mejorar capacidades offline (Service Worker).
 
-Este reporte sirve como hoja de ruta para elevar la calidad del código al nivel del nuevo diseño visual.
+---
+
+## 6. Seguridad y Protección de Datos
+
+### A. Gestión de API Keys
+- **Estado Actual:** Las API keys de Gemini y PhotoRoom están protegidas mediante Supabase Edge Functions.
+- **Mejora Pendiente:** 
+  - Implementar rotación periódica de keys.
+  - Añadir rate limiting en las Edge Functions para prevenir abuso.
+  - Implementar logging de uso de API para detectar patrones anómalos.
+
+### B. Validación de Entrada
+- **Problema:** La validación de archivos subidos es básica (solo tipo MIME).
+- **Solución:** 
+  - Validar dimensiones máximas de imagen.
+  - Implementar sanitización de nombres de archivo.
+  - Validar tamaño máximo de archivo antes de procesamiento.
+  - Añadir verificación de contenido (magic numbers) además del MIME type.
+
+### C. Autenticación y Autorización
+- **Estado Actual:** No hay sistema de autenticación implementado.
+- **Consideración Futura:** 
+  - Si se escala a multi-usuario, implementar Supabase Auth.
+  - Definir políticas de Row Level Security (RLS) en Supabase.
+  - Implementar sesiones con expiración automática.
+
+### D. Almacenamiento Seguro
+- **Mejora:** 
+  - Configurar políticas de CORS estrictas en Cloudinary.
+  - Implementar URLs firmadas para imágenes sensibles.
+  - Considerar encriptación de metadatos sensibles en Supabase.
+
+---
+
+## 7. Manejo de Errores y Resiliencia
+
+### A. Estrategia de Error Handling
+- **Problema:** Los errores se manejan de forma inconsistente (algunos con `console.error`, otros con alerts).
+- **Solución:**
+  - Implementar un sistema centralizado de manejo de errores.
+  - Crear un componente `ErrorBoundary` para capturar errores de React.
+  - Definir tipos de error estándar (Network, Validation, API, etc.).
+  - Mostrar mensajes de error user-friendly con opciones de recuperación.
+
+### B. Reintentos y Fallbacks
+- **Oportunidad:** 
+  - Implementar lógica de retry automático para llamadas a API fallidas.
+  - Añadir exponential backoff para reintentos.
+  - Proveer fallbacks cuando servicios externos fallen (ej: modo degradado sin análisis de Gemini).
+
+### C. Estado de Error en UI
+- **Mejora:**
+  - Crear componentes de estado vacío (`EmptyState`) para cuando no hay datos.
+  - Diseñar pantallas de error específicas (sin conexión, error de servidor, etc.).
+  - Implementar toasts/snackbars para errores no críticos.
+
+### D. Logging y Debugging
+- **Acción:**
+  - Implementar un sistema de logging estructurado (desarrollo vs producción).
+  - Considerar integración con servicio de error tracking (Sentry, LogRocket).
+  - Añadir breadcrumbs para rastrear el flujo de usuario antes de errores.
+
+---
+
+## 8. Testing y Aseguramiento de Calidad
+
+### A. Cobertura de Tests
+- **Estado Actual:** No hay tests implementados.
+- **Plan de Testing:**
+  - **Unit Tests:** Componentes UI básicos (Button, Card, Input) con Vitest + Testing Library.
+  - **Integration Tests:** Flujos completos (subir imagen → procesar → guardar).
+  - **E2E Tests:** Casos de uso críticos con Playwright o Cypress.
+  - **Visual Regression:** Captura de screenshots para detectar cambios visuales no intencionados.
+
+### B. Áreas Críticas para Testing
+1. **Procesamiento de Imágenes:**
+   - Validar que el canvas renderiza correctamente.
+   - Verificar que los metadatos se extraen correctamente.
+   - Probar edge cases (imágenes muy grandes, formatos raros).
+
+2. **Gestión de Catálogos:**
+   - CRUD completo de catálogos.
+   - Añadir/remover imágenes de catálogos.
+   - Ordenamiento y filtrado.
+
+3. **Integración con APIs:**
+   - Mockear respuestas de Gemini, PhotoRoom, Cloudinary.
+   - Probar manejo de errores de API.
+
+### C. Calidad de Código
+- **Herramientas Recomendadas:**
+  - **ESLint:** Configuración estricta con reglas de accesibilidad.
+  - **Prettier:** Formateo consistente.
+  - **TypeScript Strict Mode:** Habilitar flags estrictos.
+  - **Husky + lint-staged:** Pre-commit hooks para validación.
+
+---
+
+## 9. Documentación y Mantenibilidad
+
+### A. Documentación de Código
+- **Estado Actual:** Comentarios mínimos en el código.
+- **Mejoras:**
+  - Documentar funciones complejas con JSDoc.
+  - Añadir comentarios explicativos en lógica de negocio no obvia.
+  - Documentar props de componentes con TypeScript interfaces bien descritas.
+
+### B. Documentación de Usuario
+- **Faltante:**
+  - Guía de usuario para la aplicación.
+  - Tutorial interactivo para nuevos usuarios (onboarding).
+  - FAQ sobre limitaciones y mejores prácticas.
+
+### C. Documentación Técnica
+- **Necesario:**
+  - **README.md:** Instrucciones de setup, desarrollo y deployment.
+  - **ARCHITECTURE.md:** Diagrama de arquitectura y flujo de datos.
+  - **API.md:** Documentación de Edge Functions y endpoints.
+  - **CONTRIBUTING.md:** Guía para contribuidores (si aplica).
+
+### D. Versionado y Changelog
+- **Acción:**
+  - Implementar versionado semántico (SemVer).
+  - Mantener un `CHANGELOG.md` actualizado.
+  - Usar conventional commits para generar changelogs automáticos.
+
+---
+
+## 10. Métricas y Monitoreo
+
+### A. Performance Metrics
+- **Implementar:**
+  - **Core Web Vitals:** LCP, FID, CLS usando Web Vitals API.
+  - **Custom Metrics:** Tiempo de procesamiento de imagen, tiempo de carga de galería.
+  - **Bundle Size Monitoring:** Alertas si el bundle crece significativamente.
+
+### B. User Analytics
+- **Considerar (respetando privacidad):**
+  - Eventos de uso: imágenes procesadas, catálogos creados.
+  - Flujos de abandono: dónde los usuarios dejan de usar la app.
+  - Dispositivos y navegadores más usados.
+
+### C. Error Monitoring
+- **Herramientas:**
+  - Integrar Sentry o similar para tracking de errores en producción.
+  - Configurar alertas para errores críticos.
+  - Dashboard de salud de la aplicación.
+
+### D. Lighthouse CI
+- **Automatización:**
+  - Integrar Lighthouse CI en el pipeline.
+  - Establecer umbrales mínimos de performance, accesibilidad, SEO.
+  - Bloquear deploys que no cumplan estándares mínimos.
+
+---
+
+## 11. Accesibilidad (a11y)
+
+### A. Auditoría Actual
+- **Pendiente:** Realizar auditoría completa con herramientas automáticas (axe, WAVE).
+- **Áreas de Atención:**
+  - Contraste de colores (especialmente en temas claros).
+  - Navegación por teclado en todos los componentes interactivos.
+  - Lectores de pantalla (ARIA labels, roles, live regions).
+
+### B. Mejoras Específicas
+- **Formularios:**
+  - Labels asociados correctamente a inputs.
+  - Mensajes de error accesibles.
+  - Indicadores de campos requeridos.
+
+- **Modales:**
+  - Focus trap cuando están abiertos.
+  - Anuncio de apertura/cierre para lectores de pantalla.
+  - Botón de cerrar accesible por teclado (ESC).
+
+- **Imágenes:**
+  - Alt text descriptivo para todas las imágenes.
+  - Decorativas marcadas como `alt=""`.
+
+### C. Cumplimiento WCAG
+- **Objetivo:** Alcanzar nivel AA de WCAG 2.1 como mínimo.
+- **Checklist:**
+  - Contraste mínimo 4.5:1 para texto normal.
+  - Todos los controles interactivos accesibles por teclado.
+  - No depender solo del color para transmitir información.
+
+---
+
+## 12. Plan de Acción Actualizado y Priorizado
+
+### **Fase 1: Estabilización (1-2 semanas)**
+**Prioridad: CRÍTICA**
+- [ ] Implementar ErrorBoundary y manejo centralizado de errores.
+- [ ] Añadir validación robusta de archivos subidos.
+- [ ] Configurar rate limiting en Edge Functions.
+- [ ] Auditoría de accesibilidad básica (contraste, navegación por teclado).
+- [ ] Documentar README.md con setup e instrucciones.
+
+### **Fase 2: Refactorización (2-3 semanas)**
+**Prioridad: ALTA**
+- [ ] Refactorizar `App.tsx` en vistas separadas.
+- [ ] Extraer lógica de canvas a hook `useCanvasDraw`.
+- [ ] Implementar lazy loading de componentes pesados.
+- [ ] Configurar ESLint + Prettier + pre-commit hooks.
+- [ ] Crear documentación de arquitectura (ARCHITECTURE.md).
+
+### **Fase 3: Performance (1-2 semanas)**
+**Prioridad: ALTA**
+- [ ] Implementar virtual scrolling en Gallery.
+- [ ] Optimizar carga de imágenes (thumbnails de Cloudinary).
+- [ ] Añadir memoización en componentes críticos.
+- [ ] Configurar Lighthouse CI.
+- [ ] Implementar code splitting por rutas.
+
+### **Fase 4: Testing (2-3 semanas)**
+**Prioridad: MEDIA**
+- [ ] Setup de Vitest + Testing Library.
+- [ ] Tests unitarios de componentes UI base.
+- [ ] Tests de integración de flujos principales.
+- [ ] Configurar CI/CD con tests automáticos.
+- [ ] Implementar visual regression testing.
+
+### **Fase 5: UX Enhancements (1-2 semanas)**
+**Prioridad: MEDIA**
+- [ ] Implementar skeleton screens.
+- [ ] Añadir transiciones suaves entre vistas.
+- [ ] Gestos móviles (swipe actions).
+- [ ] Mejorar feedback de carga y estados vacíos.
+- [ ] Tutorial de onboarding para nuevos usuarios.
+
+### **Fase 6: Resiliencia y Monitoreo (1 semana)**
+**Prioridad: MEDIA-BAJA**
+- [ ] Implementar retry logic con exponential backoff.
+- [ ] Integrar Sentry para error tracking.
+- [ ] Configurar Web Vitals monitoring.
+- [ ] Mejorar capacidades offline (Service Worker avanzado).
+- [ ] Dashboard de métricas de uso.
+
+### **Fase 7: Seguridad Avanzada (1 semana)**
+**Prioridad: BAJA (si no hay multi-usuario)**
+- [ ] Implementar rotación de API keys.
+- [ ] Configurar Supabase RLS (si se añade auth).
+- [ ] URLs firmadas para imágenes.
+- [ ] Auditoría de seguridad completa.
+
+---
+
+## 13. Conclusión
+
+El proyecto ha alcanzado un hito importante con la migración completa al sistema de diseño "Bronze Canvas", logrando una interfaz visualmente cohesiva y moderna. Sin embargo, para que la aplicación sea verdaderamente robusta, escalable y mantenible a largo plazo, es crucial abordar la deuda técnica identificada y las oportunidades de optimización.
+
+**Puntos Clave:**
+- ✅ **Diseño Visual:** Excelente, consistente y profesional.
+- ⚠️ **Arquitectura de Código:** Requiere refactorización para mejorar mantenibilidad.
+- ⚠️ **Performance:** Buena base, pero necesita optimización para escalar.
+- ❌ **Testing:** Área crítica sin cobertura actual.
+- ⚠️ **Seguridad:** Protecciones básicas implementadas, faltan mejoras avanzadas.
+- ⚠️ **Accesibilidad:** Requiere auditoría y mejoras para cumplir estándares.
+
+**Recomendación:** Seguir el plan de acción por fases, priorizando estabilización y refactorización antes de añadir nuevas features. Esto garantizará una base sólida para el crecimiento futuro del proyecto.
+
+Este reporte sirve como hoja de ruta integral para elevar la calidad técnica del código al nivel del nuevo diseño visual, asegurando una aplicación robusta, accesible y de alto rendimiento.
