@@ -319,8 +319,8 @@ A pesar del éxito visual, existen áreas del código que requieren atención pa
 - [x] Crear esquema de base de datos para Jobs y Items.
 - [x] Implementar servicio frontend de Batch Processing.
 - [x] Crear UI de carga múltiple y progreso (`BatchProgressModal`).
-- [ ] Implementar Edge Function para procesamiento de colas.
-- [ ] Configurar Cron Job para workers.
+- [x] Implementar Edge Function para procesamiento de colas.
+- [x] Configurar Cron Job para workers.
 - [ ] Dashboard de historial de trabajos.
 
 ### **Fase 5: Testing (2-3 semanas)**
