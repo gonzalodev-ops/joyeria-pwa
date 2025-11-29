@@ -297,6 +297,18 @@ A pesar del éxito visual, existen áreas del código que requieren atención pa
 - ✅ `src/components/ErrorBoundary.tsx` - Mejorado con UI Bronze Canvas
 - ✅ `src/index.css` - Estilos de foco mejorados y utilidades a11y
 - ✅ `README.md` - Documentación completa del proyecto
+### **Fase 2: Refactorización (2-3 semanas)**
+**Prioridad: ALTA**
+- [x] Refactorizar `App.tsx` para separar lógica de vistas (`StudioView`, `Gallery`, etc.).
+- [x] Extraer lógica de dibujo de `CanvasEditor.tsx` a hook `useCanvasDraw`.
+- [x] Implementar `React.lazy` y `Suspense` para carga diferida de vistas.
+- [x] Estandarizar componentes UI clave (`ImageUploader`, `CanvasEditor`) con "Bronze Canvas".
+- [ ] Mover lógica de estado global a Contexts o Zustand (si es necesario).
+
+### **Fase 3: Performance (1-2 semanas)**
+**Prioridad: ALTA**
+- [ ] Implementar virtual scrolling en Gallery.
+- [ ] Optimizar carga de imágenes (thumbnails de Cloudinary).
 - [ ] Añadir memoización en componentes críticos.
 - [ ] Configurar Lighthouse CI.
 - [ ] Implementar code splitting por rutas.
