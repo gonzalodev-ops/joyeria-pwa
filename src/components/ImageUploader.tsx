@@ -6,10 +6,12 @@ import { useToast } from '../contexts/ToastContext';
 
 interface ImageUploaderProps {
     onImageSelect: (file: File) => void;
+    onMultipleImagesSelect?: (files: File[]) => void;
     className?: string;
+    multiple?: boolean;
 }
 
-export function ImageUploader({ onImageSelect, className }: ImageUploaderProps) {
+export function ImageUploader({ onImageSelect, onMultipleImagesSelect, className, multiple = false }: ImageUploaderProps) {
     const { showToast } = useToast();
     const [isDragging, setIsDragging] = useState(false);
     const [preview, setPreview] = useState<string | null>(null);
@@ -25,26 +27,40 @@ export function ImageUploader({ onImageSelect, className }: ImageUploaderProps) 
         setIsDragging(false);
     }, []);
 
-    const processFile = async (file: File) => {
+    const processFiles = async (files: File[]) => {
         setIsValidating(true);
         try {
-            const validation = await validateImageFile(file);
+            const validFiles: File[] = [];
 
-            if (!validation.valid) {
-                showToast(validation.error?.userMessage || 'Archivo inválido', 'error');
-                return;
+            for (const file of files) {
+                const validation = await validateImageFile(file);
+
+                if (!validation.valid) {
+                    showToast(`Error con ${file.name}: ${validation.error?.userMessage}`, 'error');
+                    continue;
+                }
+
+                if (validation.warnings && validation.warnings.length > 0) {
+                    validation.warnings.forEach(w => showToast(w, 'warning'));
+                }
+
+                validFiles.push(file);
             }
 
-            if (validation.warnings && validation.warnings.length > 0) {
-                validation.warnings.forEach(w => showToast(w, 'warning'));
-            }
+            if (validFiles.length === 0) return;
 
-            const objectUrl = URL.createObjectURL(file);
-            setPreview(objectUrl);
-            onImageSelect(file);
+            if (multiple && onMultipleImagesSelect) {
+                onMultipleImagesSelect(validFiles);
+            } else if (validFiles.length > 0) {
+                // Single file mode
+                const file = validFiles[0];
+                const objectUrl = URL.createObjectURL(file);
+                setPreview(objectUrl);
+                onImageSelect(file);
+            }
         } catch (error) {
             console.error('Validation error:', error);
-            showToast('Error al validar la imagen', 'error');
+            showToast('Error al validar las imágenes', 'error');
         } finally {
             setIsValidating(false);
         }
@@ -55,22 +71,22 @@ export function ImageUploader({ onImageSelect, className }: ImageUploaderProps) 
             e.preventDefault();
             setIsDragging(false);
 
-            const file = e.dataTransfer.files[0];
-            if (file) {
-                processFile(file);
+            const files = Array.from(e.dataTransfer.files);
+            if (files.length > 0) {
+                processFiles(files);
             }
         },
-        [onImageSelect]
+        [onImageSelect, onMultipleImagesSelect, multiple]
     );
 
     const handleFileInput = useCallback(
         (e: React.ChangeEvent<HTMLInputElement>) => {
-            const file = e.target.files?.[0];
-            if (file) {
-                processFile(file);
+            const files = e.target.files ? Array.from(e.target.files) : [];
+            if (files.length > 0) {
+                processFiles(files);
             }
         },
-        [onImageSelect]
+        [onImageSelect, onMultipleImagesSelect, multiple]
     );
 
     const clearImage = (e: React.MouseEvent) => {
@@ -85,7 +101,7 @@ export function ImageUploader({ onImageSelect, className }: ImageUploaderProps) 
                 isDragging
                     ? 'border-bronze-canvas-accent bg-bronze-canvas-accent/5'
                     : 'border-bronze-canvas-border hover:border-bronze-canvas-accent hover:bg-bronze-canvas-component-bg',
-                preview ? 'border-none' : '',
+                preview && !multiple ? 'border-none' : '',
                 className
             )}
             onDragOver={handleDragOver}
@@ -100,14 +116,15 @@ export function ImageUploader({ onImageSelect, className }: ImageUploaderProps) 
                 accept="image/*"
                 onChange={handleFileInput}
                 disabled={isValidating}
+                multiple={multiple}
             />
 
             {isValidating ? (
                 <div className="flex flex-col items-center justify-center text-bronze-canvas-accent">
                     <MaterialIcon icon="progress_activity" className="animate-spin mb-2" size={32} />
-                    <p className="text-sm font-medium">Validando imagen...</p>
+                    <p className="text-sm font-medium">Validando {multiple ? 'imágenes' : 'imagen'}...</p>
                 </div>
-            ) : preview ? (
+            ) : preview && !multiple ? (
                 <div className="relative w-full h-full">
                     <img
                         src={preview}
@@ -124,9 +141,11 @@ export function ImageUploader({ onImageSelect, className }: ImageUploaderProps) 
             ) : (
                 <div className="flex flex-col items-center justify-center text-bronze-canvas-secondary-text group-hover:text-bronze-canvas-primary-text transition-colors">
                     <div className="p-4 bg-bronze-canvas-component-bg rounded-full mb-3 group-hover:bg-bronze-canvas-border transition-colors">
-                        <MaterialIcon icon="add_photo_alternate" size={24} />
+                        <MaterialIcon icon={multiple ? "photo_library" : "add_photo_alternate"} size={24} />
                     </div>
-                    <p className="text-sm font-medium">Click o arrastra para subir</p>
+                    <p className="text-sm font-medium">
+                        {multiple ? 'Click o arrastra imágenes para subir lote' : 'Click o arrastra para subir'}
+                    </p>
                     <p className="text-xs text-bronze-canvas-secondary-text mt-1">JPG, PNG, WEBP (Máx 10MB)</p>
                 </div>
             )}

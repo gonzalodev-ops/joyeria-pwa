@@ -5,6 +5,7 @@ import type { CanvasEditorRef } from '../components/CanvasEditor';
 import { SaveModal } from '../components/SaveModal';
 import { CatalogSelector } from '../components/CatalogSelector';
 import { SaveImageDialog } from '../components/SaveImageDialog';
+import { BatchProgressModal } from '../components/BatchProgressModal';
 import { useToast } from '../contexts/ToastContext';
 import { useEditor } from '../contexts/EditorContext';
 import { removeBackground } from '../services/photoroom';
@@ -13,6 +14,7 @@ import type { JewelryMetadata } from '../services/gemini';
 import { uploadWithEnhancement, uploadDataURLToCloudinary } from '../services/cloudinary';
 import type { CloudinaryEnhancement } from '../services/cloudinary';
 import { saveImage, addImageToCatalog } from '../services/database';
+import { createBatchJob } from '../services/batchProcessing';
 import { Button, Card, MaterialIcon } from '../components/ui';
 
 interface StudioViewProps {
@@ -34,6 +36,7 @@ export function StudioView({ onNavigate, onStatsUpdate }: StudioViewProps) {
     } = useEditor();
 
     const [isSaving, setIsSaving] = useState(false);
+    const [batchJobId, setBatchJobId] = useState<string | null>(null);
 
     // Modal states
     const [showSaveModal, setShowSaveModal] = useState(false);
@@ -46,6 +49,39 @@ export function StudioView({ onNavigate, onStatsUpdate }: StudioViewProps) {
         setSelectedImage(file);
         setProcessedImage(null);
         setMetadata(null);
+    };
+
+    const handleMultipleImagesSelect = async (files: File[]) => {
+        if (files.length === 0) return;
+
+        if (files.length === 1) {
+            handleImageSelect(files[0]);
+            return;
+        }
+
+        // Batch processing flow
+        try {
+            setIsProcessing(true);
+            const jobId = await createBatchJob(files, {
+                removeBackground: true,
+                analyzeMetadata: true,
+                applyWatermark: false,
+                outputFormat: 'png'
+            });
+            setBatchJobId(jobId);
+        } catch (error) {
+            console.error('Error creating batch job:', error);
+            showToast('Error al iniciar procesamiento por lotes', 'error');
+            setIsProcessing(false);
+        }
+    };
+
+    const handleBatchComplete = () => {
+        setBatchJobId(null);
+        setIsProcessing(false);
+        showToast('Procesamiento por lotes completado', 'success');
+        onStatsUpdate();
+        onNavigate('gallery');
     };
 
     const handleProcessAll = async () => {
@@ -74,8 +110,6 @@ export function StudioView({ onNavigate, onStatsUpdate }: StudioViewProps) {
             setIsAnalyzing(false);
         }
     };
-
-
 
     const handleSave = async (
         confirmedMetadata: JewelryMetadata,
@@ -223,7 +257,12 @@ export function StudioView({ onNavigate, onStatsUpdate }: StudioViewProps) {
                             </p>
                         </div>
                         <div className="w-full max-w-[480px]">
-                            <ImageUploader onImageSelect={handleImageSelect} className="border-none h-auto p-0" />
+                            <ImageUploader
+                                onImageSelect={handleImageSelect}
+                                onMultipleImagesSelect={handleMultipleImagesSelect}
+                                multiple={true}
+                                className="border-none h-auto p-0"
+                            />
                         </div>
                     </div>
                 ) : (
@@ -331,6 +370,13 @@ export function StudioView({ onNavigate, onStatsUpdate }: StudioViewProps) {
                 onClose={() => setShowCatalogSelector(false)}
                 onSelect={handleExportToCatalog}
             />
+
+            {batchJobId && (
+                <BatchProgressModal
+                    jobId={batchJobId}
+                    onComplete={handleBatchComplete}
+                />
+            )}
         </>
     );
 }
