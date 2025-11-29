@@ -2,17 +2,60 @@
 
 Este documento describe la implementación de rate limiting para proteger las Edge Functions de abuso y controlar costos de API.
 
-## 1. Estrategia de Rate Limiting
+## 1. Estrategia de Rate Limiting para SaaS
 
-### Límites Propuestos
+### Contexto del Negocio
+- **Modelo:** SaaS para joyerías
+- **Uso típico:** 200-300 imágenes/día por cliente
+- **Patrón:** Procesamiento por lotes (batch processing)
+- **Objetivo:** Balance entre protección y UX fluida
 
-| Endpoint | Límite por IP | Ventana de Tiempo | Límite por Usuario* |
-|----------|---------------|-------------------|---------------------|
-| `/analyze-image` | 10 requests | 1 minuto | 50 requests/día |
-| `/remove-background` | 5 requests | 1 minuto | 20 requests/día |
-| `/enhance-image` | 10 requests | 1 minuto | 50 requests/día |
+### Límites Propuestos (Orientados a SaaS)
 
-*Cuando se implemente autenticación
+#### Por Usuario Autenticado (Recomendado)
+
+| Plan | Imágenes/Día | Burst Rate* | Procesamiento Concurrente | Precio Sugerido |
+|------|--------------|-------------|---------------------------|-----------------|
+| **Free Trial** | 50 | 10/min | 2 simultáneas | $0 |
+| **Starter** | 300 | 30/min | 5 simultáneas | $29/mes |
+| **Professional** | 1000 | 60/min | 10 simultáneas | $99/mes |
+| **Enterprise** | Ilimitado | 120/min | 20 simultáneas | Custom |
+
+*Burst Rate = Pico máximo de requests por minuto
+
+#### Por IP (Sin Autenticación - Fallback)
+
+| Endpoint | Límite por IP | Ventana | Propósito |
+|----------|---------------|---------|-----------|
+| `/analyze-image` | 100 requests | 1 hora | Prevenir abuso anónimo |
+| `/remove-background` | 100 requests | 1 hora | Prevenir abuso anónimo |
+| `/batch-process` | 10 batches | 1 hora | Limitar lotes grandes |
+
+### Arquitectura Recomendada: Sistema de Colas
+
+Para procesamiento por lotes eficiente:
+
+```
+Usuario sube 50 imágenes
+         ↓
+    [Frontend]
+         ↓
+  Crea Job en Cola
+         ↓
+    [Supabase]
+    jobs table
+         ↓
+  [Background Worker]
+  (Edge Function + Cron)
+         ↓
+  Procesa 5 a la vez
+  (rate limit interno)
+         ↓
+   Actualiza progreso
+         ↓
+  Usuario ve dashboard
+  "Procesando 30/50..."
+```
 
 ## 2. Implementación con Upstash Redis
 
