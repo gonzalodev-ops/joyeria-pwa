@@ -77,10 +77,58 @@ body {
   }
 }
 
-/* Focus visible styles */
+/* Focus visible styles - WCAG 2.4.7 Focus Visible */
+*:focus {
+  outline: none;
+  /* Remove default outline */
+}
+
 *:focus-visible {
-  outline: 2px solid #a6886e;
+  outline: 3px solid var(--bronze-canvas-accent, #8b6f47);
   outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Enhanced focus for interactive elements */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--bronze-canvas-accent, #8b6f47);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px rgba(139, 111, 71, 0.1);
+}
+
+/* Screen reader only content - WCAG 1.3.1 Info and Relationships */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Skip link for keyboard navigation - WCAG 2.4.1 Bypass Blocks */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--bronze-canvas-accent, #8b6f47);
+  color: white;
+  padding: 8px 16px;
+  text-decoration: none;
+  border-radius: 0 0 4px 0;
+  z-index: 100;
+  font-weight: 600;
+}
+
+.skip-link:focus {
+  top: 0;
 }
 
 /* Selection styles */
