@@ -6,6 +6,7 @@ import { SaveModal } from '../components/SaveModal';
 import { CatalogSelector } from '../components/CatalogSelector';
 import { SaveImageDialog } from '../components/SaveImageDialog';
 import { useToast } from '../contexts/ToastContext';
+import { useEditor } from '../contexts/EditorContext';
 import { removeBackground } from '../services/photoroom';
 import { analyzeJewelryImage } from '../services/gemini';
 import type { JewelryMetadata } from '../services/gemini';
@@ -22,11 +23,16 @@ interface StudioViewProps {
 export function StudioView({ onNavigate, onStatsUpdate }: StudioViewProps) {
     const { showToast } = useToast();
 
-    const [selectedImage, setSelectedImage] = useState<File | null>(null);
-    const [processedImage, setProcessedImage] = useState<string | null>(null);
-    const [metadata, setMetadata] = useState<JewelryMetadata | null>(null);
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    // Use global editor state
+    const {
+        selectedImage, setSelectedImage,
+        processedImage, setProcessedImage,
+        metadata, setMetadata,
+        isProcessing, setIsProcessing,
+        isAnalyzing, setIsAnalyzing,
+        resetEditor
+    } = useEditor();
+
     const [isSaving, setIsSaving] = useState(false);
 
     // Modal states
@@ -69,28 +75,7 @@ export function StudioView({ onNavigate, onStatsUpdate }: StudioViewProps) {
         }
     };
 
-    const initiateSave = () => {
-        if (!canvasEditorRef.current || !processedImage) {
-            showToast('Por favor procesa una imagen primero', 'warning');
-            return;
-        }
 
-        if (!metadata) {
-            // Create dummy metadata
-            const dummyMetadata: JewelryMetadata = {
-                title: '',
-                category: 'Otro',
-                material: '',
-                description: '',
-                keywords: [],
-                lighting_analysis: 'No disponible',
-                cloudinary_enhancements: { brightness: 0, contrast: 0, saturation: 0, auto_enhance: false }
-            };
-            setMetadata(dummyMetadata);
-        }
-
-        setShowSaveModal(true);
-    };
 
     const handleSave = async (
         confirmedMetadata: JewelryMetadata,
@@ -128,10 +113,12 @@ export function StudioView({ onNavigate, onStatsUpdate }: StudioViewProps) {
                 await addImageToCatalog(catalogId, savedImage.id);
                 showToast('Guardado en catálogo exitosamente', 'success');
                 onStatsUpdate();
+                resetEditor(); // Clear editor after successful save
                 onNavigate('catalogs');
             } else {
                 showToast('Guardado en galería exitosamente', 'success');
                 onStatsUpdate();
+                resetEditor(); // Clear editor after successful save
                 onNavigate('gallery');
             }
         } catch (error) {
@@ -165,6 +152,7 @@ export function StudioView({ onNavigate, onStatsUpdate }: StudioViewProps) {
 
             showToast('Guardado en galería exitosamente', 'success');
             onStatsUpdate();
+            resetEditor(); // Clear editor
             onNavigate('gallery');
         } catch (error) {
             console.error('Error saving to gallery:', error);
@@ -202,6 +190,7 @@ export function StudioView({ onNavigate, onStatsUpdate }: StudioViewProps) {
                 await addImageToCatalog(catalogId, savedImage.id);
                 showToast('Exportado al catálogo exitosamente', 'success');
                 onStatsUpdate();
+                resetEditor(); // Clear editor
                 onNavigate('catalogs');
             }
         } catch (error) {
@@ -210,6 +199,10 @@ export function StudioView({ onNavigate, onStatsUpdate }: StudioViewProps) {
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const handleCancel = () => {
+        resetEditor();
     };
 
     return (
@@ -239,7 +232,7 @@ export function StudioView({ onNavigate, onStatsUpdate }: StudioViewProps) {
                         <div className="bg-bronze-canvas-component-bg rounded-xl border border-bronze-canvas-border p-4">
                             <div className="flex justify-between items-center mb-4">
                                 <h2 className="text-lg font-bold text-bronze-canvas-primary-text">Estudio de Edición</h2>
-                                <Button variant="ghost" size="sm" onClick={() => setSelectedImage(null)} icon="close">
+                                <Button variant="ghost" size="sm" onClick={handleCancel} icon="close">
                                     Cancelar
                                 </Button>
                             </div>
@@ -267,7 +260,7 @@ export function StudioView({ onNavigate, onStatsUpdate }: StudioViewProps) {
                                         fullWidth
                                         onClick={handleProcessAll}
                                         loading={isProcessing || isAnalyzing}
-                                        icon="auto_awesome"
+                                        icon="autoAwesome"
                                     >
                                         Procesar Imagen (AI)
                                     </Button>
@@ -299,7 +292,7 @@ export function StudioView({ onNavigate, onStatsUpdate }: StudioViewProps) {
                             size="lg"
                             onClick={() => setShowCatalogSelector(true)}
                             disabled={isSaving}
-                            icon="auto_stories"
+                            icon="autoStories"
                         >
                             Exportar a Catálogo
                         </Button>
@@ -309,7 +302,7 @@ export function StudioView({ onNavigate, onStatsUpdate }: StudioViewProps) {
                             size="lg"
                             onClick={() => setShowSaveDialog(true)}
                             disabled={isSaving}
-                            icon="photo_library"
+                            icon="photoLibrary"
                         >
                             Guardar en Galería
                         </Button>

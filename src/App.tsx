@@ -66,10 +66,14 @@ function AppContent() {
   );
 }
 
+import { EditorProvider } from './contexts/EditorContext';
+
 function App() {
   return (
     <SettingsProvider>
-      <AppContent />
+      <EditorProvider>
+        <AppContent />
+      </EditorProvider>
     </SettingsProvider>
   );
 }

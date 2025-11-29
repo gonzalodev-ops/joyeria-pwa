@@ -303,7 +303,7 @@ A pesar del éxito visual, existen áreas del código que requieren atención pa
 - [x] Extraer lógica de dibujo de `CanvasEditor.tsx` a hook `useCanvasDraw`.
 - [x] Implementar `React.lazy` y `Suspense` para carga diferida de vistas.
 - [x] Estandarizar componentes UI clave (`ImageUploader`, `CanvasEditor`) con "Bronze Canvas".
-- [ ] Mover lógica de estado global a Contexts o Zustand (si es necesario).
+- [x] Mover lógica de estado global a Contexts o Zustand (si es necesario).
 
 ### **Fase 3: Performance (1-2 semanas)**
 **Prioridad: ALTA**
